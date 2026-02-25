@@ -9,6 +9,7 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.npm-cache
 
 # testing
 /coverage
@@ -35,6 +36,8 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+/.codex
 
 # typescript
 *.tsbuildinfo
