@@ -1,16 +1,12 @@
 "use client";
 
 import { useContext, useReducer } from "react";
-import { getAxiosInstace } from "../../utils/axiosInstance";
 import {
-  getProfileError,
   getProfilePending,
   getProfileSuccess,
-  loginError,
   loginPending,
   loginSuccess,
   logoutSuccess,
-  registerError,
   registerPending,
   registerSuccess,
 } from "./actions";
@@ -26,16 +22,15 @@ import {
 } from "./context";
 import { AuthenticationReducer } from "./reducer";
 
-const AUTH_BASE_URL =
-  process.env.NEXT_PUBLIC_AUTH_API_URL ??
-  "https://sales-automation-bmdqg9b6a0d3ffem.southafricanorth-01.azurewebsites.net/api/Auth";
-
-const mapError = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "An unexpected error occurred.";
-};
+const buildMockUser = (email?: string): IAuthenticationUser => ({
+  userId: "dev-user",
+  email,
+  firstName: "Dev",
+  lastName: "User",
+  token: "dev-token",
+  roles: ["user"],
+  expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+});
 
 export const AuthenticationProvider = ({
   children,
@@ -43,7 +38,6 @@ export const AuthenticationProvider = ({
   children: React.ReactNode;
 }) => {
   const [state, dispatch] = useReducer(AuthenticationReducer, INITIAL_STATE);
-  const instance = getAxiosInstace();
 
   const persistToken = (token?: string) => {
     if (typeof window !== "undefined" && token) {
@@ -53,30 +47,16 @@ export const AuthenticationProvider = ({
 
   const getProfile = async () => {
     dispatch(getProfilePending());
-    try {
-      const response = await instance.get<IAuthenticationUser>(`${AUTH_BASE_URL}/me`);
-      dispatch(getProfileSuccess(response.data));
-    } catch (error) {
-      const message = mapError(error);
-      dispatch(getProfileError(message));
-      throw new Error(message);
-    }
+    const mockUser = buildMockUser("dev@example.com");
+    persistToken(mockUser.token);
+    dispatch(getProfileSuccess(mockUser));
   };
 
   const register = async (payload: IAuthenticationRegisterPayload) => {
     dispatch(registerPending());
-    try {
-      const response = await instance.post<IAuthenticationUser>(
-        `${AUTH_BASE_URL}/register`,
-        payload,
-      );
-      persistToken(response.data.token);
-      dispatch(registerSuccess(response.data));
-    } catch (error) {
-      const message = mapError(error);
-      dispatch(registerError(message));
-      throw new Error(message);
-    }
+    const mockUser = buildMockUser(payload.email);
+    persistToken(mockUser.token);
+    dispatch(registerSuccess(mockUser));
   };
 
   const logout = () => {
@@ -88,18 +68,9 @@ export const AuthenticationProvider = ({
 
   const login = async (credentials: IAuthenticationCredentials) => {
     dispatch(loginPending());
-    try {
-      const response = await instance.post<IAuthenticationUser>(
-        `${AUTH_BASE_URL}/login`,
-        credentials,
-      );
-      persistToken(response.data.token);
-      dispatch(loginSuccess(response.data));
-    } catch (error) {
-      const message = mapError(error);
-      dispatch(loginError(message));
-      throw new Error(message);
-    }
+    const mockUser = buildMockUser(credentials.email);
+    persistToken(mockUser.token);
+    dispatch(loginSuccess(mockUser));
   };
 
   return (

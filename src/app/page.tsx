@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { withAuth } from "@/hoc";
+import { withAuth } from '../hoc'
 
 const RootPage = () => {
   const router = useRouter();
@@ -14,4 +14,4 @@ const RootPage = () => {
   return null;
 };
 
-export default withAuth(RootPage);
+export default RootPage;
