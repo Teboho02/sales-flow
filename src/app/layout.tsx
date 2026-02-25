@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { ConfigProvider } from "antd";
 import { Geist, Geist_Mono } from "next/font/google";
+import "antd/dist/reset.css";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,7 +27,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <ConfigProvider
+          theme={{
+            token: {
+              colorPrimary: "#1677ff",
+              colorInfo: "#1677ff",
+              colorBgLayout: "#f4f8ff",
+              colorBgContainer: "#ffffff",
+              borderRadius: 10,
+            },
+          }}
+        >
+          {children}
+        </ConfigProvider>
       </body>
     </html>
   );
