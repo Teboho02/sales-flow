@@ -28,7 +28,7 @@ const RegisterView = () => {
         phoneNumber: values.phoneNumber,
         password: values.password,
       });
-      router.push("/");
+      router.push("/home");
     } catch {
       // Error state is handled by provider and rendered in the form.
     }

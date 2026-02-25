@@ -1,7 +1,17 @@
-import { redirect } from "next/navigation";
+"use client";
 
-const HomePage = () => {
-  redirect("/login");
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { withAuth } from "@/hoc";
+
+const RootPage = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/home");
+  }, [router]);
+
+  return null;
 };
 
-export default HomePage;
+export default withAuth(RootPage);
