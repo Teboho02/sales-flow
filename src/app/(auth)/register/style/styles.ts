@@ -17,6 +17,12 @@ export const useStyles = createStyles(({ token }) => ({
     align-items: center;
     justify-content: center;
     padding: 40px 24px;
+
+    @media( max-width: 700){
+      leftPanel {
+      display : none;
+}
+    }
   `,
   rightPanel: css`
     flex: 1;
