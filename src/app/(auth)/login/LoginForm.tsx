@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormProps } from "antd";
-import { Button, Checkbox, Form, Input } from "antd";
+import { Alert, Button, Checkbox, Form, Input } from "antd";
 
 import { useStyles } from "./style/styles";
 
@@ -14,6 +14,8 @@ export interface LoginFormValues {
 export interface LoginFormProps {
   onSubmit?: (values: LoginFormValues) => Promise<void> | void;
   isLoading?: boolean;
+  hasError?: boolean;
+  errorMessage?: string;
 }
 
 const defaultInitialValues: LoginFormValues = {
@@ -25,6 +27,8 @@ const defaultInitialValues: LoginFormValues = {
 const LoginForm = ({
   onSubmit,
   isLoading = false,
+  hasError = false,
+  errorMessage,
 }: LoginFormProps) => {
   const { styles } = useStyles();
   const [form] = Form.useForm<LoginFormValues>();
@@ -87,6 +91,16 @@ const LoginForm = ({
       >
         Sign in
       </Button>
+      {hasError ? (
+        <Alert
+          type="error"
+          showIcon
+          message={
+            errorMessage || "Sign in failed. Please check your credentials and try again."
+          }
+          style={{ marginTop: 16 }}
+        />
+      ) : null}
     </Form>
   );
 };

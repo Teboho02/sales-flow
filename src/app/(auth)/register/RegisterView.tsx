@@ -1,26 +1,31 @@
 "use client";
 
-import { Typography } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuthenticationActions, useAuthenticationState } from "@/provider";
-
-import LoginForm from "./LoginForm";
-import type { LoginFormValues } from "./LoginForm";
+import { Typography } from "antd";
+import {
+  useAuthenticationActions,
+  useAuthenticationState,
+} from "@/provider";
+import RegisterForm from "./RegisterForm";
+import type { RegisterFormValues } from "./RegisterForm";
 import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
 
-const LoginView = () => {
+const RegisterView = () => {
   const { styles } = useStyles();
   const router = useRouter();
-  const { login } = useAuthenticationActions();
+  const { register } = useAuthenticationActions();
   const { isPending, isError, errorMessage } = useAuthenticationState();
 
-  const handleSubmit = async (values: LoginFormValues) => {
+  const handleSubmit = async (values: RegisterFormValues) => {
     try {
-      await login({
+      await register({
+        firstName: values.firstName,
+        lastName: values.lastName,
         email: values.email,
+        phoneNumber: values.phoneNumber,
         password: values.password,
       });
       router.push("/");
@@ -41,20 +46,22 @@ const LoginView = () => {
           <div className={styles.header}>
             <Text className={styles.appName}>Sales Flow</Text>
             <Title level={3} className={styles.title}>
-              Welcome back
+              Create your account
             </Title>
             <Text className={styles.subtitle}>
-              Sign in to continue managing your pipeline.
+              Start managing your sales pipeline in one place.
             </Text>
           </div>
-          <LoginForm
+
+          <RegisterForm
             onSubmit={handleSubmit}
             isLoading={isPending}
             hasError={isError}
             errorMessage={errorMessage}
           />
+
           <Text className={styles.subtitle} style={{ marginTop: 12, display: "block" }}>
-            New here? <Link href="/register">Create an account</Link>
+            Already have an account? <Link href="/login">Sign in</Link>
           </Text>
         </div>
       </section>
@@ -62,4 +69,4 @@ const LoginView = () => {
   );
 };
 
-export default LoginView;
+export default RegisterView;

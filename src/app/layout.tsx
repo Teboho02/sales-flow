@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ConfigProvider } from "antd";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AuthenticationProvider } from "@/provider";
 import "antd/dist/reset.css";
 import "./globals.css";
 
@@ -38,7 +39,7 @@ export default function RootLayout({
             },
           }}
         >
-          {children}
+          <AuthenticationProvider>{children}</AuthenticationProvider>
         </ConfigProvider>
       </body>
     </html>
