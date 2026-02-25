@@ -18,6 +18,31 @@ export const useStyles = createStyles(({ token }) => ({
     justify-content: center;
     padding: 40px 24px;
   `,
+  leftPanelContent: css`
+    width: min(520px, 100%);
+  `,
+  brandRow: css`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  `,
+  logoSquare: css`
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: #8bc3ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  `,
+  logoLetter: css`
+    color: ${token.colorWhite};
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+  `,
   rightPanel: css`
     flex: 1;
     background: ${token.colorBgContainer};
@@ -58,8 +83,14 @@ export const useStyles = createStyles(({ token }) => ({
   leftTitle: css`
     margin: 0 !important;
     color: ${token.colorWhite};
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  `,
+  leftSubtitle: css`
+    display: block;
+    max-width: 420px;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 18px;
+    line-height: 1.6;
   `,
   form: css`
     display: flex;
