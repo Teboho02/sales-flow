@@ -1,6 +1,6 @@
 import { createStyles, css } from "antd-style";
 
-export const useStyles = createStyles(({ token }) => ({
+export const useStyles = createStyles(() => ({
   page: css`
     display: flex;
     flex-direction: column;

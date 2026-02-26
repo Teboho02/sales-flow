@@ -2,6 +2,7 @@
 
 import { useContext, useReducer } from "react";
 import axios from "axios";
+import type { ActionFunctionAny } from "redux-actions";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 import {
   activateContractError,
@@ -30,7 +31,6 @@ import type {
   ContractQuery,
   CreateContractDto,
   ExpiringQuery,
-  IContractActionContext,
   IContractStateContext,
   UpdateContractDto,
 } from "./context";
@@ -55,7 +55,10 @@ export const ContractProvider = ({ children }: { children: React.ReactNode }) =>
   const [state, dispatch] = useReducer(ContractReducer, INITIAL_STATE);
   const instance = getAxiosInstace();
 
-  const handleError = (err: unknown, fallback: (msg?: string) => any) => {
+  const handleError = (
+    err: unknown,
+    fallback: ActionFunctionAny<IContractStateContext>,
+  ) => {
     const message = axios.isAxiosError(err)
       ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message
       : "Request failed.";

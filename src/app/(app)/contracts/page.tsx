@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import {
   Alert,
@@ -19,6 +19,7 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useMemo } from "react";
 import { useAuthenticationState } from "@/provider";
 import { ContractProvider, useContractActions, useContractState } from "@/provider";
 import type { IContract } from "@/provider/contract/context";
@@ -74,7 +75,6 @@ const ContractsContent = () => {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
   const [selectedContract, setSelectedContract] = useState<IContract | null>(null);
-  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(undefined);
 
   const canActivate = useMemo(
     () => user?.roles?.some((r) => ["Admin", "SalesManager"].includes(r)),
@@ -90,26 +90,33 @@ const ContractsContent = () => {
         instance.get("/api/Clients?pageNumber=1&pageSize=100"),
         instance.get("/api/Opportunities?pageNumber=1&pageSize=100"),
       ]);
-      const clientItems = Array.isArray(clientsRes.data?.items)
+      const clientItemsRaw = Array.isArray(clientsRes.data?.items)
         ? clientsRes.data.items
         : Array.isArray(clientsRes.data)
           ? clientsRes.data
           : [];
-      setClients(clientItems.map((c: any) => ({ id: c.id, name: c.name })));
+      setClients(
+        (clientItemsRaw as Array<{ id: string; name?: string | null }>).map((c) => ({
+          id: c.id,
+          name: c.name ?? null,
+        })),
+      );
 
-      const oppItems = Array.isArray(oppRes.data?.items)
+      const oppItemsRaw = Array.isArray(oppRes.data?.items)
         ? oppRes.data.items
         : Array.isArray(oppRes.data)
           ? oppRes.data
           : [];
       setOpportunities(
-        oppItems.map((o: any) => ({
-          id: o.id,
-          title: o.title,
-          clientName: o.clientName,
-        })),
+        (oppItemsRaw as Array<{ id: string; title?: string | null; clientName?: string | null }>).map(
+          (o) => ({
+            id: o.id,
+            title: o.title ?? null,
+            clientName: o.clientName ?? null,
+          }),
+        ),
       );
-    } catch (err) {
+    } catch {
       messageApi.error("Failed to load clients/opportunities.");
     } finally {
       setLookupLoading(false);
@@ -124,13 +131,15 @@ const ContractsContent = () => {
       const { data } = await instance.get(`/api/Opportunities?pageNumber=1&pageSize=100${qs}`);
       const oppItems = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
       setOpportunities(
-        oppItems.map((o: any) => ({
-          id: o.id,
-          title: o.title,
-          clientName: o.clientName,
-        })),
+        (oppItems as Array<{ id: string; title?: string | null; clientName?: string | null }>).map(
+          (o) => ({
+            id: o.id,
+            title: o.title ?? null,
+            clientName: o.clientName ?? null,
+          }),
+        ),
       );
-    } catch (err) {
+    } catch {
       messageApi.error("Failed to load opportunities.");
     } finally {
       setLookupLoading(false);
@@ -146,7 +155,7 @@ const ContractsContent = () => {
   const handleCreateOrUpdate = async () => {
     try {
       const values = await form.validateFields();
-      const payload = {
+      const payload: CreateContractDto & Partial<UpdateContractDto> = {
         title: values.title,
         clientId: values.clientId,
         opportunityId: values.opportunityId || undefined,
@@ -159,7 +168,7 @@ const ContractsContent = () => {
         renewalNoticePeriod: Number(values.renewalNoticePeriod),
         autoRenew: values.autoRenew ?? false,
         terms: values.terms || undefined,
-      } as any;
+      };
 
       let success = false;
       if (isEdit && selectedContract) {
@@ -204,11 +213,10 @@ const ContractsContent = () => {
     }
   };
 
-  const columns: ColumnsType<IContract> = useMemo(
-    () => [
-      {
-        title: "Title",
-        dataIndex: "title",
+  const columns: ColumnsType<IContract> = [
+    {
+      title: "Title",
+      dataIndex: "title",
         key: "title",
         render: (text: string | null) => text ?? "Untitled",
       },
@@ -275,7 +283,6 @@ const ContractsContent = () => {
                   autoRenew: record.autoRenew,
                   terms: record.terms ?? "",
                 });
-                setSelectedClientId(record.clientId);
                 void fetchOpportunitiesByClient(record.clientId);
               }}
             >
@@ -299,9 +306,7 @@ const ContractsContent = () => {
           </Space>
         ),
       },
-    ],
-    [canActivate, canDelete, form, isPending],
-  );
+  ];
 
   return (
     <Card>
@@ -400,7 +405,6 @@ const ContractsContent = () => {
               optionFilterProp="label"
               placeholder="Select client"
               onChange={(val) => {
-                setSelectedClientId(val);
                 form.setFieldsValue({ opportunityId: undefined });
                 void fetchOpportunitiesByClient(val);
               }}

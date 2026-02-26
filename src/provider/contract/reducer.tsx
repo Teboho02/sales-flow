@@ -113,7 +113,9 @@ export const ContractReducer = handleActions<IContractStateContext, IContractSta
     [ContractActionEnums.deleteContractSuccess]: (state, action) => ({
       ...state,
       ...action.payload,
-      contracts: state.contracts?.filter((c) => c.id !== (action.payload as any).id),
+      contracts: state.contracts?.filter(
+        (c) => c.id !== (action.payload as IContractStateContext & { id?: string }).id,
+      ),
       contract: undefined,
     }),
     [ContractActionEnums.deleteContractError]: (state, action) => ({

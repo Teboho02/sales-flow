@@ -14,4 +14,4 @@ const RootPage = () => {
   return null;
 };
 
-export default RootPage;
+export default withAuth(RootPage);

@@ -2,6 +2,7 @@
 
 import { useContext, useReducer } from "react";
 import axios from "axios";
+import type { ActionFunctionAny } from "redux-actions";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 import {
   getOpportunitiesReportError,
@@ -12,7 +13,6 @@ import {
   getSalesByPeriodSuccess,
 } from "./actions";
 import type {
-  IReportActionContext,
   IReportStateContext,
   OpportunitiesReportQuery,
   SalesByPeriodQuery,
@@ -24,7 +24,10 @@ export const ReportProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(ReportReducer, INITIAL_STATE);
   const instance = getAxiosInstace();
 
-  const handleError = (err: unknown, fallback: (msg?: string) => any) => {
+  const handleError = (
+    err: unknown,
+    fallback: ActionFunctionAny<IReportStateContext>,
+  ) => {
     const message = axios.isAxiosError(err)
       ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message
       : "Request failed.";

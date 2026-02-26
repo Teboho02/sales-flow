@@ -2,14 +2,9 @@
 
 import { Avatar, Input, Layout, Menu } from "antd";
 import type { MenuProps } from "antd";
-import {
-  BarChartOutlined,
-  SearchOutlined,
-  UnorderedListOutlined,
-} from "@ant-design/icons";
+import { BarChartOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { withAuth } from '../../../hoc'
 import { useAuthenticationState} from '../../../provider'
 import { useStyles } from "./style/styles";
 
@@ -103,7 +98,6 @@ const AppShell = ({ children }: AppShellProps) => {
             <Input
               allowClear
               placeholder="Search"
-              prefix={<SearchOutlined />}
               className={styles.searchInput}
             />
             <Avatar size={36} className={styles.profileAvatar}>

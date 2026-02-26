@@ -131,7 +131,9 @@ export const ProposalReducer = handleActions<IProposalStateContext, IProposalSta
     [ProposalActionEnums.deleteProposalSuccess]: (state, action) => ({
       ...state,
       ...action.payload,
-      proposals: state.proposals?.filter((p) => p.id !== (action.payload as any).id),
+      proposals: state.proposals?.filter(
+        (p) => p.id !== (action.payload as IProposalStateContext & { id?: string }).id,
+      ),
       proposal: undefined,
     }),
     [ProposalActionEnums.deleteProposalError]: (state, action) => ({

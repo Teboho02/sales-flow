@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import {
   Alert,
   Button,
@@ -16,7 +17,7 @@ import { getAxiosInstace } from "@/utils/axiosInstance";
 import { useAuthenticationActions } from "@/provider";
 import { useStyles } from "./style/styles";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 type StageMetrics = {
   stage: number;
@@ -98,12 +99,12 @@ const DashboardView = () => {
       setOverview(overviewRes.data);
       setPipelineMetrics(pipelineRes.data);
       setTopPerformers(Array.isArray(performanceRes.data) ? performanceRes.data : []);
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.detail ??
-        err?.response?.data?.title ??
-        err?.message ??
-        "Failed to load dashboard data.";
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message
+        : err instanceof Error
+          ? err.message
+          : "Failed to load dashboard data.";
       setError(message);
     } finally {
       setLoading(false);

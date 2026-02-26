@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Button,
@@ -113,11 +113,19 @@ const OpportunitiesView = () => {
       const instance = getAxiosInstace();
       const { data } = await instance.get("/api/Clients?pageNumber=1&pageSize=100");
       if (Array.isArray(data.items)) {
-        setClients(data.items.map((c: any) => ({ id: c.id, name: c.name })));
+        const mapped = (data.items as Array<{ id: string; name?: string | null }>).map((c) => ({
+          id: c.id,
+          name: c.name ?? null,
+        }));
+        setClients(mapped);
       } else if (Array.isArray(data)) {
-        setClients(data.map((c: any) => ({ id: c.id, name: c.name })));
+        const mapped = (data as Array<{ id: string; name?: string | null }>).map((c) => ({
+          id: c.id,
+          name: c.name ?? null,
+        }));
+        setClients(mapped);
       }
-    } catch (err) {
+    } catch {
       messageApi.error("Failed to load clients for selection.");
     } finally {
       setClientsLoading(false);
@@ -164,7 +172,7 @@ const OpportunitiesView = () => {
       const values = await stageForm.validateFields();
       if (!selectedOpportunity) return;
       const success = await updateStage(selectedOpportunity.id, {
-        newStage: values.newStage,
+        stage: values.newStage,
         notes: values.notes || undefined,
         lossReason: values.lossReason || undefined,
       });
@@ -197,11 +205,10 @@ const OpportunitiesView = () => {
     }
   };
 
-  const columns: ColumnsType<IOpportunity> = useMemo(
-    () => [
-      {
-        title: "Title",
-        dataIndex: "title",
+  const columns: ColumnsType<IOpportunity> = [
+    {
+      title: "Title",
+      dataIndex: "title",
         key: "title",
         render: (text: string | null) => text ?? "Untitled",
       },
@@ -282,9 +289,7 @@ const OpportunitiesView = () => {
           </Space>
         ),
       },
-    ],
-    [assignForm, stageForm, canAssign, canDelete],
-  );
+  ];
 
   const subtitle = restrictToOwner
     ? "Showing only opportunities assigned to you."

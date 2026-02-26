@@ -2,6 +2,7 @@
 
 import { useContext, useReducer } from "react";
 import axios from "axios";
+import type { ActionFunction1, Action } from "redux-actions";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 import {
   assignOpportunityError,
@@ -35,7 +36,6 @@ import {
 import type {
   AssignOpportunityDto,
   CreateOpportunityDto,
-  IOpportunityActionContext,
   IOpportunityStateContext,
   OpportunityQuery,
   UpdateOpportunityDto,
@@ -66,34 +66,41 @@ const buildQueryString = (query?: OpportunityQuery): string => {
 
 export const OpportunityProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(OpportunityReducer, INITIAL_STATE);
+
+  // Cast dispatch to accept redux-actions Action objects
+  const typedDispatch = dispatch as React.Dispatch<Action<IOpportunityStateContext>>;
+
   const instance = getAxiosInstace();
 
-  const handleError = (err: unknown, fallback: (msg?: string) => any) => {
+  const handleError = (
+    err: unknown,
+    fallback: ActionFunction1<string | undefined, Action<IOpportunityStateContext>>,
+  ) => {
     const message = axios.isAxiosError(err)
       ? err.response?.data?.detail ??
         err.response?.data?.title ??
         err.message
       : "Request failed.";
-    dispatch(fallback(message));
+    typedDispatch(fallback(message));
     return message;
   };
 
   const getOpportunity = async (id: string) => {
-    dispatch(getOpportunityPending());
+    typedDispatch(getOpportunityPending());
     try {
       const { data } = await instance.get(`${BASE_URL}/${id}`);
-      dispatch(getOpportunitySuccess(data));
+      typedDispatch(getOpportunitySuccess(data));
     } catch (err) {
       handleError(err, getOpportunityError);
     }
   };
 
   const getOpportunities = async (query?: OpportunityQuery) => {
-    dispatch(getOpportunitiesPending());
+    typedDispatch(getOpportunitiesPending());
     try {
       const { data } = await instance.get(`${BASE_URL}${buildQueryString(query)}`);
       if (Array.isArray(data.items)) {
-        dispatch(
+        typedDispatch(
           getOpportunitiesSuccess({
             items: data.items,
             pageNumber: data.pageNumber,
@@ -103,8 +110,7 @@ export const OpportunityProvider = ({ children }: { children: React.ReactNode })
           }),
         );
       } else {
-        // Fallback if API ever returns plain array
-        dispatch(
+        typedDispatch(
           getOpportunitiesSuccess({
             items: Array.isArray(data) ? data : [],
           }),
@@ -116,10 +122,10 @@ export const OpportunityProvider = ({ children }: { children: React.ReactNode })
   };
 
   const createOpportunity = async (payload: CreateOpportunityDto): Promise<boolean> => {
-    dispatch(createOpportunityPending());
+    typedDispatch(createOpportunityPending());
     try {
       const { data } = await instance.post(BASE_URL, payload);
-      dispatch(createOpportunitySuccess(data));
+      typedDispatch(createOpportunitySuccess(data));
       return true;
     } catch (err) {
       handleError(err, createOpportunityError);
@@ -131,10 +137,10 @@ export const OpportunityProvider = ({ children }: { children: React.ReactNode })
     id: string,
     payload: UpdateOpportunityDto,
   ): Promise<boolean> => {
-    dispatch(updateOpportunityPending());
+    typedDispatch(updateOpportunityPending());
     try {
       const { data } = await instance.put(`${BASE_URL}/${id}`, payload);
-      dispatch(updateOpportunitySuccess(data));
+      typedDispatch(updateOpportunitySuccess(data));
       return true;
     } catch (err) {
       handleError(err, updateOpportunityError);
@@ -143,10 +149,10 @@ export const OpportunityProvider = ({ children }: { children: React.ReactNode })
   };
 
   const deleteOpportunity = async (id: string): Promise<boolean> => {
-    dispatch(deleteOpportunityPending());
+    typedDispatch(deleteOpportunityPending());
     try {
       await instance.delete(`${BASE_URL}/${id}`);
-      dispatch(deleteOpportunitySuccess(id));
+      typedDispatch(deleteOpportunitySuccess(id));
       return true;
     } catch (err) {
       handleError(err, deleteOpportunityError);
@@ -155,10 +161,10 @@ export const OpportunityProvider = ({ children }: { children: React.ReactNode })
   };
 
   const updateStage = async (id: string, payload: UpdateStageDto): Promise<boolean> => {
-    dispatch(updateStagePending());
+    typedDispatch(updateStagePending());
     try {
       const { data } = await instance.put(`${BASE_URL}/${id}/stage`, payload);
-      dispatch(updateStageSuccess(data));
+      typedDispatch(updateStageSuccess(data));
       return true;
     } catch (err) {
       handleError(err, updateStageError);
@@ -170,10 +176,10 @@ export const OpportunityProvider = ({ children }: { children: React.ReactNode })
     id: string,
     payload: AssignOpportunityDto,
   ): Promise<boolean> => {
-    dispatch(assignOpportunityPending());
+    typedDispatch(assignOpportunityPending());
     try {
       const { data } = await instance.post(`${BASE_URL}/${id}/assign`, payload);
-      dispatch(assignOpportunitySuccess(data));
+      typedDispatch(assignOpportunitySuccess(data));
       return true;
     } catch (err) {
       handleError(err, assignOpportunityError);
@@ -182,21 +188,21 @@ export const OpportunityProvider = ({ children }: { children: React.ReactNode })
   };
 
   const getStageHistory = async (id: string) => {
-    dispatch(getStageHistoryPending());
+    typedDispatch(getStageHistoryPending());
     try {
       const { data } = await instance.get(`${BASE_URL}/${id}/stage-history`);
-      dispatch(getStageHistorySuccess(data));
+      typedDispatch(getStageHistorySuccess(data));
     } catch (err) {
       handleError(err, getStageHistoryError);
     }
   };
 
   const getPipelineMetrics = async (ownerId?: string) => {
-    dispatch(getPipelineMetricsPending());
+    typedDispatch(getPipelineMetricsPending());
     try {
       const qs = ownerId ? `?ownerId=${ownerId}` : "";
       const { data } = await instance.get(`${BASE_URL}/pipeline${qs}`);
-      dispatch(getPipelineMetricsSuccess(data));
+      typedDispatch(getPipelineMetricsSuccess(data));
     } catch (err) {
       handleError(err, getPipelineMetricsError);
     }
