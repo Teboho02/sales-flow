@@ -249,7 +249,7 @@ const OpportunitiesView = () => {
               min={0}
               step={1000}
               formatter={(v) => (v ? `R ${v}` : "")}
-              parser={(v) => (v ? v.replace(/[R\s,]/g, "") : "") as unknown as number}
+              parser={(v) => (v ? Number(v.replace(/[R\s,]/g, "")) : 0)}
             />
           </Form.Item>
           <Form.Item
