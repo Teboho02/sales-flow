@@ -20,6 +20,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { OpportunityProvider, useOpportunityActions, useOpportunityState } from "@/provider";
 import type { IOpportunity } from "@/provider/opportunity/context";
+import { getAxiosInstace } from "@/utils/axiosInstance";
 
 const { Title, Text } = Typography;
 
@@ -66,11 +67,31 @@ const OpportunitiesView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const [clients, setClients] = useState<Array<{ id: string; name: string | null }>>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
 
   useEffect(() => {
     void getOpportunities({ pageNumber: 1, pageSize: 25 });
+    void fetchClients();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchClients = async () => {
+    setClientsLoading(true);
+    try {
+      const instance = getAxiosInstace();
+      const { data } = await instance.get("/api/Clients?pageNumber=1&pageSize=100");
+      if (Array.isArray(data.items)) {
+        setClients(data.items.map((c: any) => ({ id: c.id, name: c.name })));
+      } else if (Array.isArray(data)) {
+        setClients(data.map((c: any) => ({ id: c.id, name: c.name })));
+      }
+    } catch (err) {
+      messageApi.error("Failed to load clients for selection.");
+    } finally {
+      setClientsLoading(false);
+    }
+  };
 
   const handleCreate = async () => {
     try {
@@ -214,17 +235,19 @@ const OpportunitiesView = () => {
           </Form.Item>
           <Form.Item
             name="clientId"
-            label="Client ID"
-            rules={[
-              { required: true, message: "Enter client ID (UUID)" },
-              {
-                pattern:
-                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
-                message: "Enter a valid UUID",
-              },
-            ]}
+            label="Client"
+            rules={[{ required: true, message: "Select a client" }]}
           >
-            <Input placeholder="Client UUID" />
+            <Select
+              showSearch
+              placeholder="Select client"
+              loading={clientsLoading}
+              optionFilterProp="label"
+              options={clients.map((c) => ({
+                label: c.name || c.id,
+                value: c.id,
+              }))}
+            />
           </Form.Item>
           <Form.Item
             name="contactId"
