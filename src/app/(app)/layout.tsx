@@ -10,6 +10,7 @@ import {
   SearchOutlined,
   TeamOutlined,
   UnorderedListOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -162,7 +163,12 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
             />
           </div>
           <div className={styles.headerRight}>
-            <Avatar size={36} className={styles.profileAvatar}>
+            <Avatar
+              size={36}
+              className={styles.profileAvatar}
+              onClick={() => router.push("/profile")}
+              style={{ cursor: "pointer" }}
+            >
               {initials}
             </Avatar>
           </div>

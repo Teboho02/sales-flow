@@ -21,6 +21,12 @@ export const useStyles = createStyles(({ token }) => ({
     gap: 6px;
   `,
 
+  headerCurrent: css`
+    font-size: 16px;
+    font-weight: 600;
+    color: ${token.colorTextHeading};
+  `,
+
   metricsGrid: css`
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -68,6 +74,11 @@ export const useStyles = createStyles(({ token }) => ({
 
   activityCard: css`
     border-radius: 18px;
+  `,
+
+  panelCard: css`
+    border-radius: 14px;
+    height: 100%;
   `,
 
   activityItem: css`
