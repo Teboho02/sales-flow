@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Typography } from "antd";
+import { useEffect } from "react";
 import {
   useAuthenticationActions,
   useAuthenticationState,
@@ -17,20 +18,48 @@ const RegisterView = () => {
   const { styles } = useStyles();
   const router = useRouter();
   const { register } = useAuthenticationActions();
-  const { isPending, isError, errorMessage } = useAuthenticationState();
+  const { isPending, isError, errorMessage, user } = useAuthenticationState();
+  const hasToken =
+    typeof window !== "undefined" &&
+    Boolean(window.localStorage.getItem("auth_token"));
+
+  useEffect(() => {
+    if (user?.userId && hasToken) {
+      router.replace("/home");
+    }
+  }, [hasToken, router, user?.userId]);
 
   const handleSubmit = async (values: RegisterFormValues) => {
-    try {
-      await register({
-        firstName: values.firstName,
-        lastName: values.lastName,
-        email: values.email,
-        phoneNumber: values.phoneNumber,
-        password: values.password,
+    const { accountType, ...rest } = values;
+
+    const basePayload = {
+      firstName: rest.firstName,
+      lastName: rest.lastName,
+      email: rest.email,
+      phoneNumber: rest.phoneNumber,
+      password: rest.password,
+    };
+
+    let success = false;
+
+    if (accountType === "newTenant") {
+      success = await register({
+        ...basePayload,
+        tenantName: rest.tenantName,
       });
+    } else if (accountType === "joinTenant") {
+      success = await register({
+        ...basePayload,
+        tenantId: rest.tenantId,
+        role: rest.role,
+      });
+    } else {
+      // defaultTenant flow: no tenantName / tenantId / role sent; backend defaults to shared tenant + SalesRep.
+      success = await register(basePayload);
+    }
+
+    if (success) {
       router.push("/home");
-    } catch {
-      // Error state is handled by provider and rendered in the form.
     }
   };
 
@@ -49,7 +78,7 @@ const RegisterView = () => {
               Create your account
             </Title>
             <Text className={styles.subtitle}>
-              Start managing your sales pipeline in one place.
+              Choose to create a new org (Admin), join with a Tenant ID, or try the shared demo.
             </Text>
           </div>
 

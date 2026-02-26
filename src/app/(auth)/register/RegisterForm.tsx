@@ -1,8 +1,10 @@
 "use client";
 
 import type { FormProps } from "antd";
-import { Alert, Button, Form, Input, Row, Col } from "antd";
+import { Alert, Button, Col, Form, Input, Radio, Row, Select, Typography } from "antd";
 import { useStyles } from "./style/styles";
+
+const { Text } = Typography;
 
 export interface RegisterFormValues {
   firstName: string;
@@ -11,6 +13,10 @@ export interface RegisterFormValues {
   phoneNumber: string;
   password: string;
   confirmPassword: string;
+  accountType: "newTenant" | "joinTenant" | "defaultTenant";
+  tenantName?: string;
+  tenantId?: string;
+  role?: "SalesRep" | "SalesManager" | "BusinessDevelopmentManager";
 }
 
 export interface RegisterFormProps {
@@ -28,10 +34,9 @@ const RegisterForm = ({
 }: RegisterFormProps) => {
   const { styles } = useStyles();
   const [form] = Form.useForm<RegisterFormValues>();
+  const accountType = Form.useWatch("accountType", form);
 
-  const handleFinish: FormProps<RegisterFormValues>["onFinish"] = async (
-    values,
-  ) => {
+  const handleFinish: FormProps<RegisterFormValues>["onFinish"] = async (values) => {
     if (!onSubmit) {
       return;
     }
@@ -45,7 +50,50 @@ const RegisterForm = ({
       requiredMark={false}
       className={styles.form}
       onFinish={handleFinish}
+      initialValues={{
+        accountType: "newTenant",
+        role: "SalesRep",
+      }}
     >
+      <Form.Item<RegisterFormValues>
+        label="Account Type"
+        name="accountType"
+        rules={[{ required: true, message: "Choose how you want to sign up." }]}
+      >
+        <Radio.Group buttonStyle="solid" className={styles.segmented}>
+          <Radio.Button value="newTenant">Create organisation (Admin)</Radio.Button>
+          <Radio.Button value="joinTenant">Join existing tenant</Radio.Button>
+          <Radio.Button value="defaultTenant">Use demo tenant</Radio.Button>
+        </Radio.Group>
+      </Form.Item>
+
+      {accountType === "newTenant" ? (
+        <Alert
+          type="info"
+          showIcon
+          message="You’ll create a new organisation and become its Admin."
+          style={{ marginBottom: 12 }}
+        />
+      ) : null}
+
+      {accountType === "joinTenant" ? (
+        <Alert
+          type="info"
+          showIcon
+          message="You need a Tenant ID from an Admin. Admin role cannot be self-assigned here."
+          style={{ marginBottom: 12 }}
+        />
+      ) : null}
+
+      {accountType === "defaultTenant" ? (
+        <Alert
+          type="info"
+          showIcon
+          message="You’ll join the shared demo tenant as SalesRep. No tenant details needed."
+          style={{ marginBottom: 12 }}
+        />
+      ) : null}
+
       <Row gutter={12}>
         <Col span={12}>
           <Form.Item<RegisterFormValues>
@@ -85,6 +133,53 @@ const RegisterForm = ({
       >
         <Input size="large" autoComplete="tel" placeholder="+27 82 000 0000" />
       </Form.Item>
+
+      {accountType === "newTenant" ? (
+        <Form.Item<RegisterFormValues>
+          label="Organisation / Tenant Name"
+          name="tenantName"
+          rules={[{ required: true, message: "Enter your organisation name." }]}
+        >
+          <Input size="large" placeholder="Acme Consulting" />
+        </Form.Item>
+      ) : null}
+
+      {accountType === "joinTenant" ? (
+        <>
+          <Form.Item<RegisterFormValues>
+            label="Tenant ID"
+            name="tenantId"
+            rules={[
+              { required: true, message: "Enter the tenant ID provided by your Admin." },
+              {
+                pattern:
+                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+                message: "Enter a valid UUID (tenant ID).",
+              },
+            ]}
+          >
+            <Input size="large" placeholder="63d7bdc1-d2c4-488c-98c7-15c8d0657d58" />
+          </Form.Item>
+
+          <Form.Item<RegisterFormValues>
+            label="Role"
+            name="role"
+            rules={[{ required: true, message: "Select your role." }]}
+          >
+            <Select
+              size="large"
+              options={[
+                { value: "SalesRep", label: "Sales Rep" },
+                { value: "SalesManager", label: "Sales Manager" },
+                {
+                  value: "BusinessDevelopmentManager",
+                  label: "Business Development Manager",
+                },
+              ]}
+            />
+          </Form.Item>
+        </>
+      ) : null}
 
       <Form.Item<RegisterFormValues>
         label="Password"
@@ -134,6 +229,10 @@ const RegisterForm = ({
           style={{ marginTop: 16 }}
         />
       ) : null}
+
+      <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: "block" }}>
+        We’ll never share your credentials. By creating an account you agree to the terms.
+      </Text>
     </Form>
   );
 };
