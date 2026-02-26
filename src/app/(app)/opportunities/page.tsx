@@ -54,7 +54,8 @@ const formatDate = (date?: string | null) =>
   date ? new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(date)) : "—";
 
 const OpportunitiesView = () => {
-  const { getOpportunities, createOpportunity } = useOpportunityActions();
+  const { getOpportunities, createOpportunity, updateStage, assignOpportunity, deleteOpportunity } =
+    useOpportunityActions();
   const {
     opportunities,
     isPending,
@@ -69,6 +70,11 @@ const OpportunitiesView = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [clients, setClients] = useState<Array<{ id: string; name: string | null }>>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [stageModalOpen, setStageModalOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<IOpportunity | null>(null);
+  const [stageForm] = Form.useForm();
+  const [assignForm] = Form.useForm();
 
   useEffect(() => {
     void getOpportunities({ pageNumber: 1, pageSize: 25 });
@@ -120,6 +126,52 @@ const OpportunitiesView = () => {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    const success = await deleteOpportunity(id);
+    if (success) {
+      messageApi.success("Opportunity deleted");
+      void getOpportunities({ pageNumber: pageNumber ?? 1, pageSize: pageSize ?? 25 });
+    }
+  };
+
+  const handleStageUpdate = async () => {
+    try {
+      const values = await stageForm.validateFields();
+      if (!selectedOpportunity) return;
+      const success = await updateStage(selectedOpportunity.id, {
+        newStage: values.newStage,
+        notes: values.notes || undefined,
+        lossReason: values.lossReason || undefined,
+      });
+      if (success) {
+        messageApi.success("Stage updated");
+        setStageModalOpen(false);
+        stageForm.resetFields();
+        void getOpportunities({ pageNumber: pageNumber ?? 1, pageSize: pageSize ?? 25 });
+      }
+    } catch {
+      // handled by antd
+    }
+  };
+
+  const handleAssign = async () => {
+    try {
+      const values = await assignForm.validateFields();
+      if (!selectedOpportunity) return;
+      const success = await assignOpportunity(selectedOpportunity.id, {
+        userId: values.userId,
+      });
+      if (success) {
+        messageApi.success("Assigned");
+        setAssignModalOpen(false);
+        assignForm.resetFields();
+        void getOpportunities({ pageNumber: pageNumber ?? 1, pageSize: pageSize ?? 25 });
+      }
+    } catch {
+      // handled by antd
+    }
+  };
+
   const columns: ColumnsType<IOpportunity> = useMemo(
     () => [
       {
@@ -166,8 +218,43 @@ const OpportunitiesView = () => {
         key: "ownerName",
         render: (text: string | null) => text ?? "—",
       },
+      {
+        title: "Actions",
+        key: "actions",
+        render: (_, record) => (
+          <Space>
+            <Button
+              size="small"
+              onClick={() => {
+                setSelectedOpportunity(record);
+                setStageModalOpen(true);
+                stageForm.setFieldsValue({ newStage: record.stage, notes: undefined, lossReason: undefined });
+              }}
+            >
+              Stage
+            </Button>
+            <Button
+              size="small"
+              onClick={() => {
+                setSelectedOpportunity(record);
+                setAssignModalOpen(true);
+                assignForm.resetFields();
+              }}
+            >
+              Assign
+            </Button>
+            <Button
+              size="small"
+              danger
+              onClick={() => handleDelete(record.id)}
+            >
+              Delete
+            </Button>
+          </Space>
+        ),
+      },
     ],
-    [],
+    [assignForm, stageForm],
   );
 
   return (
@@ -296,6 +383,75 @@ const OpportunitiesView = () => {
           </Form.Item>
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={3} placeholder="Notes" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Update Stage"
+        open={stageModalOpen}
+        onOk={handleStageUpdate}
+        onCancel={() => setStageModalOpen(false)}
+        okText="Update"
+        confirmLoading={isPending}
+      >
+        <Form form={stageForm} layout="vertical">
+          <Form.Item name="newStage" label="Stage" rules={[{ required: true }]}>
+            <Select
+              options={[
+                { value: 1, label: "Lead" },
+                { value: 2, label: "Qualified" },
+                { value: 3, label: "Proposal" },
+                { value: 4, label: "Negotiation" },
+                { value: 5, label: "Closed Won" },
+                { value: 6, label: "Closed Lost" },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="notes" label="Notes">
+            <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, cur) => prev.newStage !== cur.newStage}
+          >
+            {({ getFieldValue }) =>
+              getFieldValue("newStage") === 6 ? (
+                <Form.Item
+                  name="lossReason"
+                  label="Loss reason"
+                  rules={[{ required: true, message: "Enter loss reason when closing lost" }]}
+                >
+                  <Input />
+                </Form.Item>
+              ) : null
+            }
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Assign Opportunity"
+        open={assignModalOpen}
+        onOk={handleAssign}
+        onCancel={() => setAssignModalOpen(false)}
+        okText="Assign"
+        confirmLoading={isPending}
+      >
+        <Form form={assignForm} layout="vertical">
+          <Form.Item
+            name="userId"
+            label="User ID"
+            rules={[
+              { required: true, message: "Enter user ID (UUID)" },
+              {
+                pattern:
+                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+                message: "Enter a valid UUID",
+              },
+            ]}
+          >
+            <Input placeholder="Assignee user UUID" />
           </Form.Item>
         </Form>
       </Modal>
