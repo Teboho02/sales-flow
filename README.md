@@ -1,6 +1,6 @@
 ﻿# Sales Flow
 
-Multi-tenant sales automation frontend built with Next.js (App Router) and Ant Design. It manages clients, contacts, opportunities, proposals, contracts, pricing requests, and dashboard reporting against the SalesFlow API. All data is tenant-scoped; JWTs carry `tenantId` and roles.
+Multi-tenant sales automation frontend built with Next.js (App Router) and Ant Design. It manages clients, contacts, opportunities, proposals, contracts, and dashboard reporting against the SalesFlow API. All data is tenant-scoped; JWTs carry `tenantId` and roles.
 
 ## Table of Contents
 - Overview
@@ -15,7 +15,7 @@ Multi-tenant sales automation frontend built with Next.js (App Router) and Ant D
 ## Overview
 - **Auth**: `/api/Auth/login` and `/api/Auth/register`; bearer token stored in `localStorage` (`auth_token`, `auth_user`). Axios interceptor attaches it to every request.
 - **Tenant isolation**: `tenantId` is derived from JWT; never send it in payloads or queries.
-- **Core flows**: client/contact creation, opportunity pipeline (Lead→Closed Won/Lost), pricing requests, proposals (draft→submit→approve/reject), contracts (draft→activate), dashboard metrics.
+- **Core flows**: client/contact creation, opportunity pipeline (Lead→Closed Won/Lost), proposals (draft→submit→approve/reject), contracts (draft→activate), dashboard metrics.
 - **UI**: Ant Design components, antd-style for styling, App layout with protected routes.
 - **State**: React Context + reducer providers per domain (auth, opportunity, client, proposal). All API calls go through a shared axios instance (`getAxiosInstace`).
 
@@ -49,8 +49,8 @@ npm run dev
 |---|---|---|
 | `Admin` | Register with `tenantName`, or assigned by another Admin | Full access to all endpoints including delete, approve, reject, assign, and user management |
 | `SalesManager` | Register with `"role": "SalesManager"` when joining | Full access including approve/reject proposals, assign opportunities, and delete records |
-| `BusinessDevelopmentManager` | Register with `"role": "BusinessDevelopmentManager"` | Create and manage opportunities, proposals, pricing requests, contracts, and activities |
-| `SalesRep` | Default when no role is specified | Read own data, create activities and pricing requests, update assigned opportunities |
+| `BusinessDevelopmentManager` | Register with `"role": "BusinessDevelopmentManager"` | Create and manage opportunities, proposals, contracts, and activities |
+| `SalesRep` | Default when no role is specified | Read own data, create activities, update assigned opportunities |
 
 ## Running Locally
 ```bash
@@ -75,6 +75,6 @@ npm run start      # serve .next build
 - **Opportunities**: list, create, stage update, assign, delete → `/api/Opportunities`, `/stage`, `/assign`.
 - **Proposals**: list, create, submit, approve/reject, delete → `/api/Proposals`, `/submit`, `/approve`, `/reject`.
 - **Dashboard**: metrics → `/api/Dashboard/overview`, `/api/Opportunities/pipeline`, `/api/Dashboard/sales-performance`.
-- **Contracts/Pricing**: API supported; UI wiring pending.
+- **Contracts**: API supported.
 
 Testing auth locally: use `/api/Auth/register` with `tenantName` to create an Admin; use `tenantId` + `role` to add SalesManager/Rep. Then log in via `/api/Auth/login` and work through clients → opportunities → proposals → contracts.

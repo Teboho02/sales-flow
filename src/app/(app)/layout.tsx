@@ -31,7 +31,6 @@ const routeLabelMap: Record<string, string> = {
   "/contracts": "Contracts",
   "/clients": "Clients",
   "/contacts": "Contacts",
-  "/pricing-requests": "Pricing",
   "/reports": "Reports",
 };
 
@@ -42,7 +41,6 @@ const routeMenuKeyMap: Record<string, string> = {
   "/contracts": "contracts",
   "/clients": "clients",
   "/contacts": "contacts",
-  "/pricing-requests": "pricing-requests",
   "/reports": "reports",
 };
 
@@ -106,12 +104,6 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
             icon: <FileDoneOutlined />,
             label: "Contracts",
             onClick: () => router.push("/contracts"),
-          },
-          {
-            key: "pricing-requests",
-            icon: <LineChartOutlined />,
-            label: "Pricing",
-            onClick: () => router.push("/pricing-requests"),
           },
         ],
       },

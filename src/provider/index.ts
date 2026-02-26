@@ -5,4 +5,3 @@ export * from "./proposal";
 export * from "./contract";
 export * from "./report";
 export * from "./contact";
-export * from "./pricing-request";
