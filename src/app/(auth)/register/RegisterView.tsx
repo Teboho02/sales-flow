@@ -54,8 +54,10 @@ const RegisterView = () => {
         role: rest.role,
       });
     } else {
-      // defaultTenant flow: no tenantName / tenantId / role sent; backend defaults to shared tenant + SalesRep.
-      success = await register(basePayload);
+      success = await register({
+        ...basePayload,
+        role: rest.role,
+      });
     }
 
     if (success) {

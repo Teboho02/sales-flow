@@ -63,6 +63,7 @@ const RegisterForm = ({
         <Radio.Group buttonStyle="solid" className={styles.segmented}>
           <Radio.Button value="newTenant">Create organisation (Admin)</Radio.Button>
           <Radio.Button value="joinTenant">Join existing tenant</Radio.Button>
+          <Radio.Button value="defaultTenant">No organisation / tenant</Radio.Button>
         </Radio.Group>
       </Form.Item>
 
@@ -72,7 +73,7 @@ const RegisterForm = ({
         <Alert
           type="info"
           showIcon
-          message="You’ll join the shared demo tenant as SalesRep. No tenant details needed."
+          message="You will join the shared tenant. Select your role below."
           style={{ marginBottom: 12 }}
         />
       ) : null}
@@ -164,6 +165,22 @@ const RegisterForm = ({
         </>
       ) : null}
 
+      {accountType === "defaultTenant" ? (
+        <Form.Item<RegisterFormValues>
+          label="Role"
+          name="role"
+          rules={[{ required: true, message: "Select your role." }]}
+        >
+          <Select
+            size="large"
+            options={[
+              { value: "SalesRep", label: "Sales Rep" },
+              { value: "SalesManager", label: "Sales Manager" },
+            ]}
+          />
+        </Form.Item>
+      ) : null}
+
       <Form.Item<RegisterFormValues>
         label="Password"
         name="password"
@@ -221,3 +238,4 @@ const RegisterForm = ({
 };
 
 export default RegisterForm;
+
