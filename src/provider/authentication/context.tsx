@@ -5,9 +5,9 @@ export interface IAuthenticationUser {
   email?: string;
   firstName?: string;
   lastName?: string;
-  phoneNumber?: string;
   token?: string;
   roles?: string[];
+  tenantId?: string;
   expiresAt?: string;
 }
 
@@ -20,7 +20,10 @@ export interface IAuthenticationRegisterPayload
   extends IAuthenticationCredentials {
   firstName: string;
   lastName: string;
-  phoneNumber: string;
+  phoneNumber?: string;
+  tenantName?: string;  // creates new org; caller becomes Admin
+  tenantId?: string;   // uuid; joins existing org (mutually exclusive with tenantName)
+  role?: string;       // "SalesRep" | "SalesManager" | "BusinessDevelopmentManager"
 }
 
 export interface IAuthenticationStateContext {
@@ -33,9 +36,9 @@ export interface IAuthenticationStateContext {
 
 export interface IAuthenticationActionContext {
   getProfile: () => Promise<void>;
-  register: (payload: IAuthenticationRegisterPayload) => Promise<void>;
+  register: (payload: IAuthenticationRegisterPayload) => Promise<boolean>;
   logout: () => void;
-  login: (credentials: IAuthenticationCredentials) => Promise<void>;
+  login: (credentials: IAuthenticationCredentials) => Promise<boolean>;
 }
 
 export const INITIAL_STATE: IAuthenticationStateContext = {
@@ -45,10 +48,10 @@ export const INITIAL_STATE: IAuthenticationStateContext = {
 };
 
 export const INITIAL_ACTION_STATE: IAuthenticationActionContext = {
-  getProfile: async () => {},
-  register: async () => {},
-  logout: () => {},
-  login: async () => {},
+  getProfile: async () => { },
+  register: async () => false,
+  logout: () => { },
+  login: async () => false,
 };
 
 export const AuthenticationStateContext =

@@ -3,6 +3,7 @@
 import { Typography } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useAuthenticationActions, useAuthenticationState } from "@/provider";
 
 import LoginForm from "./LoginForm";
@@ -15,17 +16,24 @@ const LoginView = () => {
   const { styles } = useStyles();
   const router = useRouter();
   const { login } = useAuthenticationActions();
-  const { isPending, isError, errorMessage } = useAuthenticationState();
+  const { isPending, isError, errorMessage, user } = useAuthenticationState();
+  const hasToken =
+    typeof window !== "undefined" &&
+    Boolean(window.localStorage.getItem("auth_token"));
+
+  useEffect(() => {
+    if (user?.userId && hasToken) {
+      router.replace("/home");
+    }
+  }, [hasToken, router, user?.userId]);
 
   const handleSubmit = async (values: LoginFormValues) => {
-    try {
-      await login({
-        email: values.email,
-        password: values.password,
-      });
+    const success = await login({
+      email: values.email,
+      password: values.password,
+    });
+    if (success) {
       router.push("/home");
-    } catch {
-      // Error state is handled by provider and rendered in the form.
     }
   };
 

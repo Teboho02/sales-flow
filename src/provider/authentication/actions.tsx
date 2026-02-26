@@ -55,6 +55,7 @@ export const getProfileError = createAction<
   (errorMessage?: string) => ({
     ...errorState,
     errorMessage,
+    user: undefined,
   }),
 );
 
@@ -82,6 +83,7 @@ export const registerError = createAction<
   (errorMessage?: string) => ({
     ...errorState,
     errorMessage,
+    user: undefined,
   }),
 );
 
@@ -120,5 +122,6 @@ export const loginError = createAction<
   (errorMessage?: string) => ({
     ...errorState,
     errorMessage,
+    user: undefined,
   }),
 );
