@@ -18,7 +18,12 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { OpportunityProvider, useOpportunityActions, useOpportunityState } from "@/provider";
+import {
+  OpportunityProvider,
+  useAuthenticationState,
+  useOpportunityActions,
+  useOpportunityState,
+} from "@/provider";
 import type { IOpportunity } from "@/provider/opportunity/context";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 
@@ -54,6 +59,7 @@ const formatDate = (date?: string | null) =>
   date ? new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(date)) : "—";
 
 const OpportunitiesView = () => {
+  const { user } = useAuthenticationState();
   const { getOpportunities, createOpportunity, updateStage, assignOpportunity, deleteOpportunity } =
     useOpportunityActions();
   const {
@@ -76,11 +82,30 @@ const OpportunitiesView = () => {
   const [stageForm] = Form.useForm();
   const [assignForm] = Form.useForm();
 
+  const roles = user?.roles ?? [];
+  const isAdmin = roles.includes("Admin");
+  const isSalesManager = roles.includes("SalesManager");
+  const isBDM = roles.includes("BusinessDevelopmentManager");
+  const isSalesRep = roles.includes("SalesRep");
+
+  const restrictToOwner = isSalesRep && !isAdmin && !isSalesManager && !isBDM;
+  const ownerFilter = restrictToOwner ? user?.userId : undefined;
+  const canCreate = isAdmin || isSalesManager || isBDM;
+  const canAssign = isAdmin || isSalesManager;
+  const canDelete = isAdmin || isSalesManager;
+
+  const refreshList = (page = pageNumber ?? 1, size = pageSize ?? 25) =>
+    getOpportunities({ pageNumber: page, pageSize: size, ownerId: ownerFilter });
+
   useEffect(() => {
-    void getOpportunities({ pageNumber: 1, pageSize: 25 });
-    void fetchClients();
+    if (!user) return;
+    if (restrictToOwner && !ownerFilter) return;
+    void refreshList(1, 25);
+    if (canCreate) {
+      void fetchClients();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.userId, ownerFilter, canCreate, restrictToOwner]);
 
   const fetchClients = async () => {
     setClientsLoading(true);
@@ -119,7 +144,7 @@ const OpportunitiesView = () => {
         messageApi.success("Opportunity created");
         setIsModalOpen(false);
         form.resetFields();
-        void getOpportunities({ pageNumber: pageNumber ?? 1, pageSize: pageSize ?? 25 });
+        void refreshList(pageNumber ?? 1, pageSize ?? 25);
       }
     } catch {
       // validation errors are handled by antd; API errors already surfaced by provider alert
@@ -130,7 +155,7 @@ const OpportunitiesView = () => {
     const success = await deleteOpportunity(id);
     if (success) {
       messageApi.success("Opportunity deleted");
-      void getOpportunities({ pageNumber: pageNumber ?? 1, pageSize: pageSize ?? 25 });
+      void refreshList(pageNumber ?? 1, pageSize ?? 25);
     }
   };
 
@@ -147,7 +172,7 @@ const OpportunitiesView = () => {
         messageApi.success("Stage updated");
         setStageModalOpen(false);
         stageForm.resetFields();
-        void getOpportunities({ pageNumber: pageNumber ?? 1, pageSize: pageSize ?? 25 });
+        void refreshList(pageNumber ?? 1, pageSize ?? 25);
       }
     } catch {
       // handled by antd
@@ -165,7 +190,7 @@ const OpportunitiesView = () => {
         messageApi.success("Assigned");
         setAssignModalOpen(false);
         assignForm.resetFields();
-        void getOpportunities({ pageNumber: pageNumber ?? 1, pageSize: pageSize ?? 25 });
+        void refreshList(pageNumber ?? 1, pageSize ?? 25);
       }
     } catch {
       // handled by antd
@@ -233,29 +258,37 @@ const OpportunitiesView = () => {
             >
               Stage
             </Button>
-            <Button
-              size="small"
-              onClick={() => {
-                setSelectedOpportunity(record);
-                setAssignModalOpen(true);
-                assignForm.resetFields();
-              }}
-            >
-              Assign
-            </Button>
-            <Button
-              size="small"
-              danger
-              onClick={() => handleDelete(record.id)}
-            >
-              Delete
-            </Button>
+            {canAssign && (
+              <Button
+                size="small"
+                onClick={() => {
+                  setSelectedOpportunity(record);
+                  setAssignModalOpen(true);
+                  assignForm.resetFields();
+                }}
+              >
+                Assign
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                size="small"
+                danger
+                onClick={() => handleDelete(record.id)}
+              >
+                Delete
+              </Button>
+            )}
           </Space>
         ),
       },
     ],
-    [assignForm, stageForm],
+    [assignForm, stageForm, canAssign, canDelete],
   );
+
+  const subtitle = restrictToOwner
+    ? "Showing only opportunities assigned to you."
+    : "Pipeline scoped to your tenant.";
 
   return (
     <Card>
@@ -266,14 +299,16 @@ const OpportunitiesView = () => {
             <Title level={3} style={{ margin: 0 }}>
               Opportunities
             </Title>
-            <Text type="secondary">Pipeline scoped to your tenant.</Text>
+            <Text type="secondary">{subtitle}</Text>
           </div>
           <Space>
-            <Button onClick={() => setIsModalOpen(true)} type="primary">
-              New Opportunity
-            </Button>
+            {canCreate && (
+              <Button onClick={() => setIsModalOpen(true)} type="primary">
+                New Opportunity
+              </Button>
+            )}
             <Button
-              onClick={() => void getOpportunities({ pageNumber: 1, pageSize: 25 })}
+              onClick={() => void refreshList(1, pageSize ?? 25)}
               loading={isPending}
             >
               Refresh
@@ -300,10 +335,7 @@ const OpportunitiesView = () => {
             showSizeChanger: true,
           }}
           onChange={(pagination) =>
-            void getOpportunities({
-              pageNumber: pagination.current ?? 1,
-              pageSize: pagination.pageSize ?? 25,
-            })
+            void refreshList(pagination.current ?? 1, pagination.pageSize ?? 25)
           }
         />
       </Space>
