@@ -20,6 +20,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import {
   ContactProvider,
+  useAuthenticationState,
   useContactActions,
   useContactState,
 } from "@/provider";
@@ -31,6 +32,7 @@ const { Title, Text } = Typography;
 
 const ContactContent = () => {
   const { styles } = useStyles();
+  const { user } = useAuthenticationState();
   const { getContacts, createContact, updateContact, deleteContact, setPrimaryContact } =
     useContactActions();
   const {
@@ -52,6 +54,8 @@ const ContactContent = () => {
   const [isActiveFilter, setIsActiveFilter] = useState<boolean | undefined>(undefined);
   const [clients, setClients] = useState<Array<{ id: string; name: string | null }>>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const roles = user?.roles ?? [];
+  const canManageContacts = roles.includes("Admin") || roles.includes("SalesManager");
 
   const fetchContacts = (page = pageNumber ?? 1, size = pageSize ?? 25) =>
     getContacts({
@@ -91,6 +95,10 @@ const ContactContent = () => {
   };
 
   const openCreateDrawer = () => {
+    if (!canManageContacts) {
+      messageApi.warning("You do not have permission to create contacts.");
+      return;
+    }
     setEditingContact(null);
     form.resetFields();
     form.setFieldsValue({ isActive: true, isPrimary: false });
@@ -98,6 +106,10 @@ const ContactContent = () => {
   };
 
   const openEditDrawer = (contact: IContact) => {
+    if (!canManageContacts) {
+      messageApi.warning("You do not have permission to edit contacts.");
+      return;
+    }
     setEditingContact(contact);
     form.setFieldsValue({
       firstName: contact.firstName ?? "",
@@ -113,6 +125,11 @@ const ContactContent = () => {
   };
 
   const handleSubmit = async () => {
+    if (!canManageContacts) {
+      messageApi.warning("You do not have permission to save contacts.");
+      return;
+    }
+
     try {
       const values = await form.validateFields();
       let success = false;
@@ -153,6 +170,10 @@ const ContactContent = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canManageContacts) {
+      messageApi.warning("You do not have permission to delete contacts.");
+      return;
+    }
     const success = await deleteContact(id);
     if (success) {
       messageApi.success("Contact deleted");
@@ -161,6 +182,10 @@ const ContactContent = () => {
   };
 
   const handleSetPrimary = async (id: string) => {
+    if (!canManageContacts) {
+      messageApi.warning("You do not have permission to update primary contacts.");
+      return;
+    }
     const success = await setPrimaryContact(id);
     if (success) {
       messageApi.success("Primary contact updated");
@@ -221,39 +246,41 @@ const ContactContent = () => {
         render: (val: boolean) =>
           val ? <Tag color="green">Active</Tag> : <Tag color="default">Inactive</Tag>,
       },
-      {
-        title: "Actions",
-        key: "actions",
-        render: (_, record) => (
-          <Space>
-            <Button size="small" onClick={() => openEditDrawer(record)}>
-              Edit
-            </Button>
-            {!record.isPrimary ? (
-              <Button
-                size="small"
-                type="primary"
-                onClick={() => void handleSetPrimary(record.id)}
-                loading={isPending}
-              >
-                Set primary
-              </Button>
-            ) : null}
-            <Popconfirm
-              title="Delete contact?"
-              description="This will remove the contact record."
-              onConfirm={() => void handleDelete(record.id)}
-              okText="Delete"
-              okButtonProps={{ danger: true }}
-            >
-              <Button size="small" danger>
-                Delete
-              </Button>
-            </Popconfirm>
-          </Space>
-        ),
-      },
   ];
+  if (canManageContacts) {
+    columns.push({
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Button size="small" onClick={() => openEditDrawer(record)}>
+            Edit
+          </Button>
+          {!record.isPrimary ? (
+            <Button
+              size="small"
+              type="primary"
+              onClick={() => void handleSetPrimary(record.id)}
+              loading={isPending}
+            >
+              Set primary
+            </Button>
+          ) : null}
+          <Popconfirm
+            title="Delete contact?"
+            description="This will remove the contact record."
+            onConfirm={() => void handleDelete(record.id)}
+            okText="Delete"
+            okButtonProps={{ danger: true }}
+          >
+            <Button size="small" danger>
+              Delete
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    });
+  }
 
   return (
     <Card>
@@ -267,9 +294,11 @@ const ContactContent = () => {
             <Text type="secondary">People linked to clients within your tenant.</Text>
           </div>
           <Space>
-            <Button type="primary" onClick={openCreateDrawer}>
-              New Contact
-            </Button>
+            {canManageContacts ? (
+              <Button type="primary" onClick={openCreateDrawer}>
+                New Contact
+              </Button>
+            ) : null}
             <Button onClick={() => void fetchContacts(1, pageSize ?? 25)} loading={isPending}>
               Refresh
             </Button>
@@ -353,9 +382,13 @@ const ContactContent = () => {
           onChange={(pagination) =>
             void fetchContacts(pagination.current ?? 1, pagination.pageSize ?? 25)
           }
-          onRow={(record) => ({
-            onClick: () => openEditDrawer(record),
-          })}
+          onRow={(record) =>
+            canManageContacts
+              ? {
+                  onClick: () => openEditDrawer(record),
+                }
+              : {}
+          }
         />
       </Space>
 

@@ -89,6 +89,10 @@ const PricingRequestsContent = () => {
   const roles = user?.roles ?? [];
   const isAdmin = roles.includes("Admin");
   const isManager = roles.includes("SalesManager");
+  const isBDM = roles.includes("BusinessDevelopmentManager");
+  const isSalesRep = roles.includes("SalesRep");
+  const canCreate = isAdmin || isManager || isBDM || isSalesRep;
+  const canEdit = isAdmin || isManager || isBDM;
   const canAssign = isAdmin || isManager;
   const canDelete = isAdmin || isManager;
 
@@ -129,12 +133,20 @@ const PricingRequestsContent = () => {
   };
 
   const openCreateModal = () => {
+    if (!canCreate) {
+      messageApi.warning("You do not have permission to create pricing requests.");
+      return;
+    }
     setEditingRequest(null);
     form.resetFields();
     setIsModalOpen(true);
   };
 
   const openEditModal = (request: IPricingRequest) => {
+    if (!canEdit) {
+      messageApi.warning("You do not have permission to edit pricing requests.");
+      return;
+    }
     setEditingRequest(request);
     form.setFieldsValue({
       title: request.title ?? "",
@@ -147,6 +159,15 @@ const PricingRequestsContent = () => {
   };
 
   const handleSubmit = async () => {
+    if (editingRequest && !canEdit) {
+      messageApi.warning("You do not have permission to edit pricing requests.");
+      return;
+    }
+    if (!editingRequest && !canCreate) {
+      messageApi.warning("You do not have permission to create pricing requests.");
+      return;
+    }
+
     try {
       const values = await form.validateFields();
       const payload = {
@@ -252,9 +273,11 @@ const PricingRequestsContent = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button size="small" onClick={() => openEditModal(record)}>
-            Edit
-          </Button>
+          {canEdit ? (
+            <Button size="small" onClick={() => openEditModal(record)}>
+              Edit
+            </Button>
+          ) : null}
           {canAssign ? (
             <Button
               size="small"
@@ -309,9 +332,11 @@ const PricingRequestsContent = () => {
                 Pending queue
               </Button>
             ) : null}
-            <Button type="primary" onClick={openCreateModal}>
-              New Request
-            </Button>
+            {canCreate ? (
+              <Button type="primary" onClick={openCreateModal}>
+                New Request
+              </Button>
+            ) : null}
             <Button onClick={() => void fetchRequests(1, pageSize ?? 25)} loading={isPending}>
               Refresh
             </Button>
@@ -376,9 +401,13 @@ const PricingRequestsContent = () => {
           onChange={(pagination) =>
             void fetchRequests(pagination.current ?? 1, pagination.pageSize ?? 25)
           }
-          onRow={(record) => ({
-            onClick: () => openEditModal(record),
-          })}
+          onRow={(record) =>
+            canEdit
+              ? {
+                  onClick: () => openEditModal(record),
+                }
+              : {}
+          }
         />
       </Space>
 

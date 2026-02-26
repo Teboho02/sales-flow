@@ -88,7 +88,10 @@ const ContractsContent = () => {
     () => user?.roles?.some((r) => ["Admin", "SalesManager", "BusinessDevelopmentManager"].includes(r)),
     [user?.roles],
   );
-  const canDelete = useMemo(() => user?.roles?.some((r) => ["Admin"].includes(r)), [user?.roles]);
+  const canDelete = useMemo(
+    () => user?.roles?.some((r) => ["Admin", "SalesManager"].includes(r)),
+    [user?.roles],
+  );
 
   const fetchLookups = async () => {
     setLookupLoading(true);

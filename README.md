@@ -44,11 +44,13 @@ npm run dev
 ## Environment
 - `NEXT_PUBLIC_BACKEND_API_URL`: SalesFlow API base URL (no trailing slash required; axios trims extras).
 
-## Roles & Permissions (least privilege)
-- **Admin**: full; user/tenant management, approvals, contracts activate/cancel, assignments, deletes, reports.
-- **SalesManager**: team control; approve/reject proposals; assign opportunities/pricing; delete opportunities/clients/activities; reports access.
-- **BusinessDevelopmentManager**: create/update clients, contacts, opportunities, proposals, contracts; advance stages; no approvals/contract activation; no deletes.
-- **SalesRep**: work own/assigned opps; create/complete pricing requests (if assigned); activities/notes/docs; cannot create clients/opportunities/proposals/contracts; no approvals or deletes.
+## Roles & Permissions
+| Role | How to obtain | Access level |
+|---|---|---|
+| `Admin` | Register with `tenantName`, or assigned by another Admin | Full access to all endpoints including delete, approve, reject, assign, and user management |
+| `SalesManager` | Register with `"role": "SalesManager"` when joining | Full access including approve/reject proposals, assign opportunities, and delete records |
+| `BusinessDevelopmentManager` | Register with `"role": "BusinessDevelopmentManager"` | Create and manage opportunities, proposals, pricing requests, contracts, and activities |
+| `SalesRep` | Default when no role is specified | Read own data, create activities and pricing requests, update assigned opportunities |
 
 ## Running Locally
 ```bash

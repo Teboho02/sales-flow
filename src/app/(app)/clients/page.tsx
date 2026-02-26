@@ -56,8 +56,7 @@ const ClientsContent = () => {
   const roles = user?.roles ?? [];
   const isAdmin = roles.includes("Admin");
   const isSalesManager = roles.includes("SalesManager");
-  const isBDM = roles.includes("BusinessDevelopmentManager");
-  const canManageClients = isAdmin || isSalesManager || isBDM;
+  const canManageClients = isAdmin || isSalesManager;
 
   useEffect(() => {
     void getClients({ pageNumber: 1, pageSize: 25 });

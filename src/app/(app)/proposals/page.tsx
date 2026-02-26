@@ -74,16 +74,19 @@ const ProposalsContent = () => {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
 
+  const roles = user?.roles ?? [];
+  const isAdmin = roles.includes("Admin");
+  const isSalesManager = roles.includes("SalesManager");
+  const isBDM = roles.includes("BusinessDevelopmentManager");
+
+  const canCreate = isAdmin || isSalesManager || isBDM;
   const canSubmit = useMemo(
-    () =>
-      user?.roles?.some((r) =>
-        ["Admin", "SalesManager", "BusinessDevelopmentManager"].includes(r),
-      ),
-    [user?.roles],
+    () => canCreate,
+    [canCreate],
   );
   const canApprove = useMemo(
-    () => user?.roles?.some((r) => ["Admin", "SalesManager"].includes(r)),
-    [user?.roles],
+    () => isAdmin || isSalesManager,
+    [isAdmin, isSalesManager],
   );
 
   const fetchLookups = async () => {
@@ -157,6 +160,11 @@ const ProposalsContent = () => {
   }, []);
 
   const handleCreate = async () => {
+    if (!canCreate) {
+      messageApi.warning("You do not have permission to create proposals.");
+      return;
+    }
+
     try {
       const values = await form.validateFields();
       const success = await createProposal({
@@ -315,9 +323,11 @@ const ProposalsContent = () => {
                 { label: "Review", value: 6 },
               ]}
             />
-            <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
-              New Proposal
-            </Button>
+            {canCreate ? (
+              <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
+                New Proposal
+              </Button>
+            ) : null}
             <Button onClick={() => void getProposals({ pageNumber: 1, pageSize: 25 })} loading={isPending}>
               Refresh
             </Button>
