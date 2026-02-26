@@ -12,9 +12,7 @@ import {
   Table,
   Skeleton,
 } from "antd";
-import { useRouter } from "next/navigation";
 import { getAxiosInstace } from "@/utils/axiosInstance";
-import { useAuthenticationActions } from "@/provider";
 import { useStyles } from "./style/styles";
 
 const { Text } = Typography;
@@ -77,8 +75,6 @@ type SalesPerformance = {
 
 const DashboardView = () => {
   const { styles } = useStyles();
-  const router = useRouter();
-  const { logout } = useAuthenticationActions();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [pipelineMetrics, setPipelineMetrics] = useState<PipelineMetrics | null>(null);
   const [topPerformers, setTopPerformers] = useState<SalesPerformance[]>([]);
@@ -121,8 +117,6 @@ const DashboardView = () => {
     return Object.values(pipelineMetrics.stageMetrics || {});
   }, [pipelineMetrics]);
 
-  const revenueTrend = overview?.revenue?.monthlyTrend ?? [];
-
   return (
     <div className={styles.page}>
       <section className={styles.headerRow}>
@@ -131,14 +125,6 @@ const DashboardView = () => {
           <Text className={styles.headerCurrent}>Pipeline and performance overview</Text>
         </div>
         <Space>
-          <Button
-            onClick={() => {
-              logout();
-              router.replace("/login");
-            }}
-          >
-            Logout
-          </Button>
           <Button type="primary" onClick={() => void fetchData()} loading={loading}>
             Refresh
           </Button>
@@ -226,41 +212,6 @@ const DashboardView = () => {
                     />
                   </div>
                 ))}
-              </Space>
-            </Card>
-
-            <Card className={styles.panelCard} title="Activities summary">
-              <Space direction="vertical" size={6} style={{ width: "100%" }}>
-                <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                  <Text>Upcoming</Text>
-                  <Text strong>{overview?.activities?.upcomingCount ?? "—"}</Text>
-                </Space>
-                <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                  <Text>Overdue</Text>
-                  <Text strong>{overview?.activities?.overdueCount ?? "—"}</Text>
-                </Space>
-                <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                  <Text>Completed today</Text>
-                  <Text strong>{overview?.activities?.completedTodayCount ?? "—"}</Text>
-                </Space>
-              </Space>
-            </Card>
-
-            <Card className={styles.panelCard} title="Revenue trend (monthly)">
-              <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                {revenueTrend.length === 0 ? (
-                  <Text type="secondary">No data</Text>
-                ) : (
-                  revenueTrend.map((item) => (
-                    <Space
-                      key={item.month}
-                      style={{ width: "100%", justifyContent: "space-between" }}
-                    >
-                      <Text>{item.month}</Text>
-                      <Text strong>R{item.value}</Text>
-                    </Space>
-                  ))
-                )}
               </Space>
             </Card>
 
