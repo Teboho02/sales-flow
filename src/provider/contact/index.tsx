@@ -50,8 +50,8 @@ const buildQueryString = (query?: ContactQuery): string => {
 
 const handleError = (
   err: unknown,
-  fallback: (msg?: string) => { type: ContactActionEnums; payload?: IContactStateContext },
-  dispatch: Dispatch<{ type: ContactActionEnums; payload?: IContactStateContext }>,
+  fallback: (msg?: string) => any,
+  dispatch: Dispatch<any>,
 ) => {
   const message = axios.isAxiosError(err)
     ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message

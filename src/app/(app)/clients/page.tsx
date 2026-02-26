@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Alert,
   Button,
@@ -12,36 +12,19 @@ import {
   Select,
   Space,
   Switch,
-  Table,
-  Tag,
   Typography,
   message,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
 import { ClientProvider, useClientActions, useClientState } from "@/provider";
 import type { IClient } from "@/provider/client/context";
+import ClientTable from "./_components/ClientTable";
 
 const { Title, Text } = Typography;
 
-const clientTypeLabel: Record<number, string> = {
-  1: "Government",
-  2: "Private",
-  3: "Partner",
-};
-
 const ClientsContent = () => {
-  const { getClients, createClient, updateClient, deleteClient, getClientStats } =
-    useClientActions();
-  const {
-    clients,
-    clientStats,
-    isPending,
-    isError,
-    errorMessage,
-    pageNumber,
-    pageSize,
-    totalCount,
-  } = useClientState();
+  const { getClients, createClient, updateClient, deleteClient, getClientStats } = useClientActions();
+  const { clients, clientStats, isPending, isError, errorMessage, pageNumber, pageSize, totalCount } =
+    useClientState();
 
   const [form] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,10 +35,21 @@ const ClientsContent = () => {
   const [clientTypeFilter, setClientTypeFilter] = useState<number | undefined>(undefined);
   const [isActiveFilter, setIsActiveFilter] = useState<boolean | undefined>(undefined);
 
+  const refreshClients = useCallback(
+    (page = pageNumber ?? 1, size = pageSize ?? 25, search = searchTerm, type = clientTypeFilter, active = isActiveFilter) =>
+      getClients({
+        pageNumber: page,
+        pageSize: size,
+        searchTerm: search || undefined,
+        clientType: type,
+        isActive: active,
+      }),
+    [clientTypeFilter, getClients, isActiveFilter, pageNumber, pageSize, searchTerm],
+  );
+
   useEffect(() => {
-    void getClients({ pageNumber: 1, pageSize: 25 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void refreshClients(1, 25);
+  }, [refreshClients]);
 
   const openCreateModal = () => {
     setEditingClient(null);
@@ -81,41 +75,26 @@ const ClientsContent = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      let success = false;
-      if (editingClient) {
-        success = await updateClient(editingClient.id, {
-          name: values.name,
-          clientType: values.clientType,
-          industry: values.industry || undefined,
-          companySize: values.companySize || undefined,
-          website: values.website || undefined,
-          billingAddress: values.billingAddress || undefined,
-          taxNumber: values.taxNumber || undefined,
-          isActive: values.isActive,
-        });
-      } else {
-        success = await createClient({
-          name: values.name,
-          clientType: values.clientType,
-          industry: values.industry || undefined,
-          companySize: values.companySize || undefined,
-          website: values.website || undefined,
-          billingAddress: values.billingAddress || undefined,
-          taxNumber: values.taxNumber || undefined,
-        });
-      }
+      const basePayload = {
+        name: values.name,
+        clientType: values.clientType,
+        industry: values.industry || undefined,
+        companySize: values.companySize || undefined,
+        website: values.website || undefined,
+        billingAddress: values.billingAddress || undefined,
+        taxNumber: values.taxNumber || undefined,
+      };
+
+      const success = editingClient
+        ? await updateClient(editingClient.id, { ...basePayload, isActive: values.isActive })
+        : await createClient(basePayload);
+
       if (success) {
         messageApi.success(`Client ${editingClient ? "updated" : "created"}`);
         setIsModalOpen(false);
         setEditingClient(null);
         form.resetFields();
-        void getClients({
-          pageNumber: pageNumber ?? 1,
-          pageSize: pageSize ?? 25,
-          searchTerm: searchTerm || undefined,
-          clientType: clientTypeFilter,
-          isActive: isActiveFilter,
-        });
+        void refreshClients(pageNumber ?? 1, pageSize ?? 25);
       }
     } catch {
       // validation handled by antd
@@ -126,89 +105,9 @@ const ClientsContent = () => {
     const success = await deleteClient(id);
     if (success) {
       messageApi.success("Client deleted");
-      void getClients({
-        pageNumber: pageNumber ?? 1,
-        pageSize: pageSize ?? 25,
-        searchTerm: searchTerm || undefined,
-        clientType: clientTypeFilter,
-        isActive: isActiveFilter,
-      });
+      void refreshClients(pageNumber ?? 1, pageSize ?? 25);
     }
   };
-
-  const columns: ColumnsType<IClient> = [
-    {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
-      render: (text: string | null) => text ?? "—",
-    },
-    {
-      title: "Type",
-      dataIndex: "clientType",
-      key: "clientType",
-      render: (val: number) => clientTypeLabel[val] ?? val,
-    },
-    {
-      title: "Industry",
-      dataIndex: "industry",
-      key: "industry",
-      render: (text: string | null) => text ?? "—",
-    },
-    {
-      title: "Size",
-      dataIndex: "companySize",
-      key: "companySize",
-      render: (text: string | null) => text ?? "—",
-    },
-    {
-      title: "Website",
-      dataIndex: "website",
-      key: "website",
-      render: (text: string | null) =>
-        text ? (
-          <a href={text} target="_blank" rel="noreferrer">
-            {text}
-          </a>
-        ) : (
-          "—"
-        ),
-    },
-    {
-      title: "Opportunities",
-      dataIndex: "opportunitiesCount",
-      key: "opportunitiesCount",
-    },
-    {
-      title: "Active",
-      dataIndex: "isActive",
-      key: "isActive",
-      render: (val: boolean) =>
-        val ? <Tag color="green">Active</Tag> : <Tag color="default">Inactive</Tag>,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          <Button size="small" onClick={() => openEditModal(record)}>
-            Edit
-          </Button>
-          <Popconfirm
-            title="Delete client?"
-            description="This will remove the client record."
-            onConfirm={() => void handleDelete(record.id)}
-            okText="Delete"
-            okButtonProps={{ danger: true }}
-          >
-            <Button size="small" danger>
-              Delete
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
 
   const handleRowClick = (client: IClient) => {
     setSelectedClient(client);
@@ -231,109 +130,41 @@ const ClientsContent = () => {
               <Button type="primary" onClick={openCreateModal}>
                 New Client
               </Button>
-              <Button
-                onClick={() =>
-                  void getClients({
-                    pageNumber: 1,
-                    pageSize: pageSize ?? 25,
-                    searchTerm: searchTerm || undefined,
-                    clientType: clientTypeFilter,
-                    isActive: isActiveFilter,
-                  })
-                }
-                loading={isPending}
-              >
-                Refresh
-              </Button>
             </Space>
-          </Space>
-
-            <Space wrap>
-              <Input.Search
-                allowClear
-                placeholder="Search clients"
-              onSearch={(value) => {
-                setSearchTerm(value);
-                void getClients({
-                  pageNumber: 1,
-                  pageSize: pageSize ?? 25,
-                  searchTerm: value || undefined,
-                  clientType: clientTypeFilter,
-                  isActive: isActiveFilter,
-                });
-              }}
-              style={{ width: 240 }}
-            />
-              <Select
-                allowClear
-                placeholder="Client type"
-                style={{ width: 180 }}
-                onChange={(val) => {
-                  setClientTypeFilter(val);
-                  void getClients({
-                    pageNumber: 1,
-                    pageSize: pageSize ?? 25,
-                    searchTerm: searchTerm || undefined,
-                    clientType: val,
-                    isActive: isActiveFilter,
-                  });
-                }}
-                options={[
-                  { label: "Government", value: 1 },
-                  { label: "Private", value: 2 },
-                  { label: "Partner", value: 3 },
-                ]}
-              />
-              <Select
-                allowClear
-                placeholder="Status"
-                style={{ width: 140 }}
-                onChange={(val) => {
-                  const next = val as boolean | undefined;
-                  setIsActiveFilter(next);
-                  void getClients({
-                    pageNumber: 1,
-                    pageSize: pageSize ?? 25,
-                    searchTerm: searchTerm || undefined,
-                    clientType: clientTypeFilter,
-                    isActive: next,
-                  });
-                }}
-                options={[
-                  { label: "Active", value: true },
-                  { label: "Inactive", value: false },
-                ]}
-              />
           </Space>
 
           {isError && (
             <Alert type="error" showIcon message={errorMessage || "Failed to load clients."} />
           )}
 
-          <Table
-            size="middle"
-            rowKey="id"
-            columns={columns}
-            dataSource={clients ?? []}
+          <ClientTable
+            data={clients}
             loading={isPending}
-            pagination={{
-              current: pageNumber ?? 1,
-              pageSize: pageSize ?? 25,
-              total: totalCount ?? clients?.length ?? 0,
-              showSizeChanger: true,
+            pageNumber={pageNumber}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            searchTerm={searchTerm}
+            clientTypeFilter={clientTypeFilter}
+            isActiveFilter={isActiveFilter}
+            onSearch={(value) => {
+              setSearchTerm(value);
+              void refreshClients(1, pageSize ?? 25, value, clientTypeFilter, isActiveFilter);
             }}
-            onChange={(pagination) =>
-              void getClients({
-                pageNumber: pagination.current ?? 1,
-                pageSize: pagination.pageSize ?? 25,
-                searchTerm: searchTerm || undefined,
-                clientType: clientTypeFilter,
-                isActive: isActiveFilter,
-              })
+            onClientTypeChange={(val) => {
+              setClientTypeFilter(val);
+              void refreshClients(1, pageSize ?? 25, searchTerm, val, isActiveFilter);
+            }}
+            onStatusChange={(val) => {
+              setIsActiveFilter(val);
+              void refreshClients(1, pageSize ?? 25, searchTerm, clientTypeFilter, val);
+            }}
+            onRefresh={() => void refreshClients(1, pageSize ?? 25)}
+            onPageChange={(pagination) =>
+              void refreshClients(pagination.current ?? 1, pagination.pageSize ?? 25, searchTerm, clientTypeFilter, isActiveFilter)
             }
-            onRow={(record) => ({
-              onClick: () => handleRowClick(record),
-            })}
+            onRowClick={handleRowClick}
+            onEdit={openEditModal}
+            onDelete={(client) => handleDelete(client.id)}
           />
         </Space>
 
@@ -348,15 +179,15 @@ const ClientsContent = () => {
               <Text type="secondary">Totals</Text>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Contacts</Text>
-                <Text strong>{clientStats?.totalContacts ?? "—"}</Text>
+                <Text strong>{clientStats?.totalContacts ?? "-"}</Text>
               </Space>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Opportunities</Text>
-                <Text strong>{clientStats?.totalOpportunities ?? "—"}</Text>
+                <Text strong>{clientStats?.totalOpportunities ?? "-"}</Text>
               </Space>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Contracts</Text>
-                <Text strong>{clientStats?.totalContracts ?? "—"}</Text>
+                <Text strong>{clientStats?.totalContracts ?? "-"}</Text>
               </Space>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Total contract value</Text>
@@ -367,12 +198,12 @@ const ClientsContent = () => {
                         currency: "ZAR",
                         maximumFractionDigits: 0,
                       }).format(clientStats.totalContractValue)
-                    : "—"}
+                    : "-"}
                 </Text>
               </Space>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Active opportunities</Text>
-                <Text strong>{clientStats?.activeOpportunities ?? "—"}</Text>
+                <Text strong>{clientStats?.activeOpportunities ?? "-"}</Text>
               </Space>
             </Space>
           ) : null}
@@ -460,3 +291,4 @@ const ClientsPage = () => (
 );
 
 export default ClientsPage;
+
