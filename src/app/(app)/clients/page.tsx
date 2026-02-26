@@ -18,7 +18,7 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { ClientProvider, useClientActions, useClientState } from "@/provider";
+import { ClientProvider, useAuthenticationState, useClientActions, useClientState } from "@/provider";
 import type { IClient } from "@/provider/client/context";
 
 const { Title, Text } = Typography;
@@ -52,18 +52,33 @@ const ClientsContent = () => {
   const [clientTypeFilter, setClientTypeFilter] = useState<number | undefined>(undefined);
   const [isActiveFilter, setIsActiveFilter] = useState<boolean | undefined>(undefined);
 
+  const { user } = useAuthenticationState();
+  const roles = user?.roles ?? [];
+  const isAdmin = roles.includes("Admin");
+  const isSalesManager = roles.includes("SalesManager");
+  const isBDM = roles.includes("BusinessDevelopmentManager");
+  const canManageClients = isAdmin || isSalesManager || isBDM;
+
   useEffect(() => {
     void getClients({ pageNumber: 1, pageSize: 25 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openCreateModal = () => {
+    if (!canManageClients) {
+      messageApi.warning("You don't have permission to create clients.");
+      return;
+    }
     setEditingClient(null);
     form.resetFields();
     setIsModalOpen(true);
   };
 
   const openEditModal = (client: IClient) => {
+    if (!canManageClients) {
+      messageApi.warning("You don't have permission to edit clients.");
+      return;
+    }
     setEditingClient(client);
     form.setFieldsValue({
       name: client.name ?? "",
@@ -79,6 +94,9 @@ const ClientsContent = () => {
   };
 
   const handleSubmit = async () => {
+    if (!canManageClients) {
+      return;
+    }
     try {
       const values = await form.validateFields();
       let success = false;
@@ -123,6 +141,10 @@ const ClientsContent = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canManageClients) {
+      messageApi.warning("You don't have permission to delete clients.");
+      return;
+    }
     const success = await deleteClient(id);
     if (success) {
       messageApi.success("Client deleted");
@@ -186,7 +208,9 @@ const ClientsContent = () => {
       render: (val: boolean) =>
         val ? <Tag color="green">Active</Tag> : <Tag color="default">Inactive</Tag>,
     },
-    {
+  ];
+  if (canManageClients) {
+    columns.push({
       title: "Actions",
       key: "actions",
       render: (_, record) => (
@@ -207,8 +231,8 @@ const ClientsContent = () => {
           </Popconfirm>
         </Space>
       ),
-    },
-  ];
+    });
+  }
 
   const handleRowClick = (client: IClient) => {
     setSelectedClient(client);
@@ -228,9 +252,11 @@ const ClientsContent = () => {
               <Text type="secondary">Accounts scoped to your tenant.</Text>
             </div>
             <Space>
-              <Button type="primary" onClick={openCreateModal}>
-                New Client
-              </Button>
+              {canManageClients ? (
+                <Button type="primary" onClick={openCreateModal}>
+                  New Client
+                </Button>
+              ) : null}
               <Button
                 onClick={() =>
                   void getClients({
