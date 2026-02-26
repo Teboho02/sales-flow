@@ -244,13 +244,7 @@ const OpportunitiesView = () => {
             label="Estimated Value"
             rules={[{ required: true, message: "Enter estimated value" }]}
           >
-            <InputNumber
-              style={{ width: "100%" }}
-              min={0}
-              step={1000}
-              formatter={(v) => (v ? `R ${v}` : "")}
-              parser={(v) => (v ? Number(v.replace(/[R\s,]/g, "")) : 0)}
-            />
+            <InputNumber style={{ width: "100%" }} min={0} step={1000} />
           </Form.Item>
           <Form.Item
             name="probability"

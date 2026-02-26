@@ -117,7 +117,7 @@ export const OpportunityReducer = handleActions<
       ...state,
       ...action.payload,
       opportunities: state.opportunities?.filter(
-        (o) => o.id !== (action as any).meta?.id,
+        (o) => o.id !== (action.payload as any).id,
       ),
       opportunity: undefined,
     }),

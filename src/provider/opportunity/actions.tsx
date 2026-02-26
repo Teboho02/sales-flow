@@ -148,16 +148,16 @@ export const deleteOpportunityPending = createAction<IOpportunityStateContext>(
   () => pendingState,
 );
 
-export const deleteOpportunitySuccess = createAction<IOpportunityStateContext, string>(
-  OpportunityActionEnums.deleteOpportunitySuccess,
-  (_id: string) => ({
-    isPending: false,
-    isSuccess: true,
-    isError: false,
-    opportunity: undefined,
-  }),
-  (id) => ({ id }),
-);
+export const deleteOpportunitySuccess = createAction<
+  IOpportunityStateContext & { id: string },
+  string
+>(OpportunityActionEnums.deleteOpportunitySuccess, (id: string) => ({
+  isPending: false,
+  isSuccess: true,
+  isError: false,
+  opportunity: undefined,
+  id,
+}));
 
 export const deleteOpportunityError = createAction<
   IOpportunityStateContext,
