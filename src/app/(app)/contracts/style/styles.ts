@@ -45,21 +45,8 @@ export const useStyles = createStyles(({ token }) => ({
     }
   `,
 
-  filterRow: css`
-    width: 100%;
-    gap: ${token.marginXS}px 0;
-  `,
-
-  searchInput: css`
-    width: 240px;
-
-    @media (max-width: ${token.screenMD}px) {
-      width: 100%;
-    }
-  `,
-
   filterSelect: css`
-    min-width: 140px;
+    min-width: 160px;
 
     @media (max-width: ${token.screenMD}px) {
       min-width: 100%;

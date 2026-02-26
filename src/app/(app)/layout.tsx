@@ -1,24 +1,25 @@
 "use client";
 
-import { Avatar, Input, Layout, Menu } from "antd";
+import { Avatar, Button, Drawer, Grid, Layout, Menu } from "antd";
 import type { MenuProps } from "antd";
 import {
   BarChartOutlined,
   FileDoneOutlined,
   FileTextOutlined,
   LineChartOutlined,
-  SearchOutlined,
+  MenuOutlined,
   TeamOutlined,
   UnorderedListOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { withAuth } from "@/hoc";
 import { useAuthenticationState } from "@/provider";
 import { useStyles } from "./_components/style/styles";
 
 const { Sider, Header, Content } = Layout;
+const { useBreakpoint } = Grid;
 
 interface AppGroupLayoutProps {
   children: React.ReactNode;
@@ -62,10 +63,21 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
   const pathname = usePathname();
   const { user } = useAuthenticationState();
   const { styles } = useStyles();
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   const currentTab = routeLabelMap[pathname] ?? "Dashboard";
   const selectedKey = routeMenuKeyMap[pathname] ?? "dashboard";
   const initials = getUserInitials(user?.firstName, user?.lastName, user?.email);
+
+  const handleNavigate = useCallback(
+    (path: string) => {
+      router.push(path);
+      setIsMobileNavOpen(false);
+    },
+    [router],
+  );
 
   const menuItems = useMemo<Required<MenuProps>["items"]>(
     () => [
@@ -78,7 +90,7 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
             key: "dashboard",
             icon: <BarChartOutlined />,
             label: "Dashboard",
-            onClick: () => router.push("/home"),
+            onClick: () => handleNavigate("/home"),
           },
         ],
       },
@@ -91,19 +103,19 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
             key: "opportunities",
             icon: <UnorderedListOutlined />,
             label: "Opportunities",
-            onClick: () => router.push("/opportunities"),
+            onClick: () => handleNavigate("/opportunities"),
           },
           {
             key: "proposals",
             icon: <FileTextOutlined />,
             label: "Proposals",
-            onClick: () => router.push("/proposals"),
+            onClick: () => handleNavigate("/proposals"),
           },
           {
             key: "contracts",
             icon: <FileDoneOutlined />,
             label: "Contracts",
-            onClick: () => router.push("/contracts"),
+            onClick: () => handleNavigate("/contracts"),
           },
         ],
       },
@@ -116,13 +128,13 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
             key: "clients",
             icon: <TeamOutlined />,
             label: "Clients",
-            onClick: () => router.push("/clients"),
+            onClick: () => handleNavigate("/clients"),
           },
           {
             key: "contacts",
             icon: <UserOutlined />,
             label: "Contacts",
-            onClick: () => router.push("/contacts"),
+            onClick: () => handleNavigate("/contacts"),
           },
         ],
       },
@@ -135,40 +147,43 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
             key: "reports",
             icon: <LineChartOutlined />,
             label: "Reports",
-            onClick: () => router.push("/reports"),
+            onClick: () => handleNavigate("/reports"),
           },
         ],
       },
     ],
-    [router, styles.sectionLabel],
+    [handleNavigate, styles.sectionLabel],
   );
 
   return (
     <Layout className={styles.appLayout}>
-      <Sider width={252} className={styles.sidebar}>
-        <div className={styles.brand}>
-          <div className={styles.brandLogo}>SF</div>
-          <span className={styles.brandText}>Sales Flow</span>
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          items={menuItems}
-          className={styles.navMenu}
-        />
-      </Sider>
+      {!isMobile ? (
+        <Sider width={252} className={styles.sidebar}>
+          <div className={styles.brand}>
+            <div className={styles.brandLogo}>SF</div>
+            <span className={styles.brandText}>Sales Flow</span>
+          </div>
+          <Menu
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            items={menuItems}
+            className={styles.navMenu}
+          />
+        </Sider>
+      ) : null}
       <Layout className={styles.mainLayout}>
         <Header className={styles.header}>
           <div className={styles.headerLeft}>
+            {isMobile ? (
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                className={styles.mobileMenuButton}
+                onClick={() => setIsMobileNavOpen(true)}
+                aria-label="Open navigation"
+              />
+            ) : null}
             <span className={styles.headerCurrentTab}>{currentTab}</span>
-          </div>
-          <div className={styles.headerCenter}>
-            <Input
-              allowClear
-              placeholder="Search"
-              prefix={<SearchOutlined />}
-              className={styles.searchInput}
-            />
           </div>
           <div className={styles.headerRight}>
             <Avatar
@@ -183,6 +198,23 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
         </Header>
         <Content className={styles.content}>{children}</Content>
       </Layout>
+      {isMobile ? (
+        <Drawer
+          title="Sales Flow"
+          placement="left"
+          width={252}
+          open={isMobileNavOpen}
+          onClose={() => setIsMobileNavOpen(false)}
+          className={styles.mobileDrawer}
+        >
+          <Menu
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            items={menuItems}
+            className={styles.navMenu}
+          />
+        </Drawer>
+      ) : null}
     </Layout>
   );
 };

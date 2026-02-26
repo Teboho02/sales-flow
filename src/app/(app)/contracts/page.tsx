@@ -8,6 +8,7 @@ import {
   Card,
   DatePicker,
   Form,
+  Grid,
   Input,
   InputNumber,
   Modal,
@@ -22,10 +23,12 @@ import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
 import { useAuthenticationState } from "@/provider";
 import { ContractProvider, useContractActions, useContractState } from "@/provider";
-import type { IContract } from "@/provider/contract/context";
+import type { CreateContractDto, IContract, UpdateContractDto } from "@/provider/contract/context";
 import { getAxiosInstace } from "@/utils/axiosInstance";
+import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const statusColor = (status: number) => {
   switch (status) {
@@ -59,6 +62,9 @@ const formatDate = (date?: string | null) =>
     : "—";
 
 const ContractsContent = () => {
+  const { styles } = useStyles();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { user } = useAuthenticationState();
   const { getContracts, createContract, updateContract, deleteContract, activateContract, cancelContract } =
     useContractActions();
@@ -238,18 +244,21 @@ const ContractsContent = () => {
       title: "Title",
       dataIndex: "title",
         key: "title",
+        width: 220,
         render: (text: string | null) => text ?? "Untitled",
       },
       {
         title: "Client",
         dataIndex: "clientName",
         key: "clientName",
+        width: 180,
         render: (text: string | null) => text ?? "—",
       },
       {
         title: "Status",
         dataIndex: "status",
         key: "status",
+        width: 140,
         render: (_: number, record) => (
           <Tag color={statusColor(record.status)}>{record.statusName ?? record.status}</Tag>
         ),
@@ -258,31 +267,36 @@ const ContractsContent = () => {
         title: "Value",
         dataIndex: "contractValue",
         key: "contractValue",
+        width: 150,
         render: (_: number, record) => formatCurrency(record.contractValue, record.currency),
       },
       {
         title: "End date",
         dataIndex: "endDate",
         key: "endDate",
+        width: 150,
         render: (date: string | null) => formatDate(date),
       },
       {
         title: "Days to expiry",
         dataIndex: "daysUntilExpiry",
         key: "daysUntilExpiry",
+        width: 150,
         render: (val: number) => (val !== undefined && val !== null ? val : "—"),
       },
       {
         title: "Owner",
         dataIndex: "ownerName",
         key: "ownerName",
+        width: 180,
         render: (text: string | null) => text ?? "—",
       },
       {
         title: "Actions",
         key: "actions",
+        width: 240,
         render: (_, record) => (
-          <Space>
+          <Space wrap size={[6, 6]}>
             {canEdit ? (
               <Button
                 size="small"
@@ -331,21 +345,23 @@ const ContractsContent = () => {
   ];
 
   return (
-    <Card>
+    <Card className={styles.card}>
       {contextHolder}
-      <Space direction="vertical" size={12} style={{ width: "100%" }}>
-        <Space align="center" style={{ width: "100%", justifyContent: "space-between" }}>
-          <div>
-            <Title level={3} style={{ margin: 0 }}>
+      <Space direction="vertical" size={12} className={styles.container}>
+        <div className={styles.headerRow}>
+          <div className={styles.headerText}>
+            <Title level={isMobile ? 4 : 3} className={styles.title}>
               Contracts
             </Title>
-            <Text type="secondary">Manage contracts through activation and expiry.</Text>
+            <Text type="secondary" className={styles.subtitle}>
+              Manage contracts through activation and expiry.
+            </Text>
           </div>
-          <Space>
+          <div className={styles.actions}>
             <Select
               allowClear
               placeholder="Status"
-              style={{ width: 160 }}
+              className={styles.filterSelect}
               onChange={(val) => {
                 setStatusFilter(val);
                 void getContracts({
@@ -370,22 +386,24 @@ const ContractsContent = () => {
             <Button onClick={() => void getContracts({ pageNumber: 1, pageSize: 25 })} loading={isPending}>
               Refresh
             </Button>
-          </Space>
-        </Space>
+          </div>
+        </div>
 
         {isError && <Alert type="error" showIcon message={errorMessage || "Failed to load contracts."} />}
 
         <Table
-          size="middle"
+          className={styles.table}
+          size={isMobile ? "small" : "middle"}
           rowKey="id"
           columns={columns}
           dataSource={contracts ?? []}
           loading={isPending}
+          scroll={{ x: 1200 }}
           pagination={{
             current: pageNumber ?? 1,
             pageSize: pageSize ?? 25,
             total: totalCount ?? contracts?.length ?? 0,
-            showSizeChanger: true,
+            showSizeChanger: !isMobile,
           }}
           onChange={(pagination) =>
             void getContracts({
@@ -409,6 +427,8 @@ const ContractsContent = () => {
         }}
         okText={isEdit ? "Save" : "Create"}
         confirmLoading={isPending}
+        width={isMobile ? "calc(100vw - 24px)" : 700}
+        style={isMobile ? { top: 12 } : undefined}
       >
         <Form form={form} layout="vertical">
           <Form.Item

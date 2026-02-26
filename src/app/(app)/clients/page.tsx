@@ -7,6 +7,7 @@ import {
   Card,
   Drawer,
   Form,
+  Grid,
   Input,
   Popconfirm,
   Select,
@@ -20,8 +21,10 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { ClientProvider, useAuthenticationState, useClientActions, useClientState } from "@/provider";
 import type { IClient } from "@/provider/client/context";
+import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const clientTypeLabel: Record<number, string> = {
   1: "Government",
@@ -30,6 +33,9 @@ const clientTypeLabel: Record<number, string> = {
 };
 
 const ClientsContent = () => {
+  const { styles } = useStyles();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { getClients, createClient, updateClient, deleteClient, getClientStats } =
     useClientActions();
   const {
@@ -162,48 +168,55 @@ const ClientsContent = () => {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      render: (text: string | null) => text ?? "—",
+      width: 220,
+      render: (text: string | null) => text ?? "-",
     },
     {
       title: "Type",
       dataIndex: "clientType",
       key: "clientType",
+      width: 140,
       render: (val: number) => clientTypeLabel[val] ?? val,
     },
     {
       title: "Industry",
       dataIndex: "industry",
       key: "industry",
-      render: (text: string | null) => text ?? "—",
+      width: 160,
+      render: (text: string | null) => text ?? "-",
     },
     {
       title: "Size",
       dataIndex: "companySize",
       key: "companySize",
-      render: (text: string | null) => text ?? "—",
+      width: 140,
+      render: (text: string | null) => text ?? "-",
     },
     {
       title: "Website",
       dataIndex: "website",
       key: "website",
+      width: 220,
       render: (text: string | null) =>
         text ? (
           <a href={text} target="_blank" rel="noreferrer">
             {text}
           </a>
         ) : (
-          "—"
+          "-"
         ),
     },
     {
       title: "Opportunities",
       dataIndex: "opportunitiesCount",
       key: "opportunitiesCount",
+      width: 130,
     },
     {
       title: "Active",
       dataIndex: "isActive",
       key: "isActive",
+      width: 120,
       render: (val: boolean) =>
         val ? <Tag color="green">Active</Tag> : <Tag color="default">Inactive</Tag>,
     },
@@ -212,8 +225,9 @@ const ClientsContent = () => {
     columns.push({
       title: "Actions",
       key: "actions",
+      width: 180,
       render: (_, record) => (
-        <Space>
+        <Space wrap size={[6, 6]}>
           <Button size="small" onClick={() => openEditModal(record)}>
             Edit
           </Button>
@@ -241,16 +255,18 @@ const ClientsContent = () => {
   return (
     <>
       {contextHolder}
-      <Card>
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
-          <Space align="center" style={{ width: "100%", justifyContent: "space-between" }}>
-            <div>
-              <Title level={3} style={{ margin: 0 }}>
+      <Card className={styles.card}>
+        <Space direction="vertical" size={12} className={styles.container}>
+          <div className={styles.headerRow}>
+            <div className={styles.headerText}>
+              <Title level={isMobile ? 4 : 3} className={styles.title}>
                 Clients
               </Title>
-              <Text type="secondary">Accounts scoped to your tenant.</Text>
+              <Text type="secondary" className={styles.subtitle}>
+                Accounts scoped to your tenant.
+              </Text>
             </div>
-            <Space>
+            <div className={styles.actions}>
               {canManageClients ? (
                 <Button type="primary" onClick={openCreateModal}>
                   New Client
@@ -270,13 +286,14 @@ const ClientsContent = () => {
               >
                 Refresh
               </Button>
-            </Space>
-          </Space>
+            </div>
+          </div>
 
-            <Space wrap>
+            <Space wrap className={styles.filterRow}>
               <Input.Search
                 allowClear
                 placeholder="Search clients"
+              className={styles.searchInput}
               onSearch={(value) => {
                 setSearchTerm(value);
                 void getClients({
@@ -287,12 +304,11 @@ const ClientsContent = () => {
                   isActive: isActiveFilter,
                 });
               }}
-              style={{ width: 240 }}
             />
               <Select
                 allowClear
                 placeholder="Client type"
-                style={{ width: 180 }}
+                className={styles.filterSelect}
                 onChange={(val) => {
                   setClientTypeFilter(val);
                   void getClients({
@@ -312,7 +328,7 @@ const ClientsContent = () => {
               <Select
                 allowClear
                 placeholder="Status"
-                style={{ width: 140 }}
+                className={styles.filterSelect}
                 onChange={(val) => {
                   const next = val as boolean | undefined;
                   setIsActiveFilter(next);
@@ -336,16 +352,18 @@ const ClientsContent = () => {
           )}
 
           <Table
-            size="middle"
+            className={styles.table}
+            size={isMobile ? "small" : "middle"}
             rowKey="id"
             columns={columns}
             dataSource={clients ?? []}
             loading={isPending}
+            scroll={{ x: 1200 }}
             pagination={{
               current: pageNumber ?? 1,
               pageSize: pageSize ?? 25,
               total: totalCount ?? clients?.length ?? 0,
-              showSizeChanger: true,
+              showSizeChanger: !isMobile,
             }}
             onChange={(pagination) =>
               void getClients({
@@ -366,22 +384,22 @@ const ClientsContent = () => {
           title={selectedClient?.name ?? "Client stats"}
           open={Boolean(selectedClient)}
           onClose={() => setSelectedClient(null)}
-          width={360}
+          width={isMobile ? "100%" : 360}
         >
           {selectedClient ? (
             <Space direction="vertical" size={8} style={{ width: "100%" }}>
               <Text type="secondary">Totals</Text>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Contacts</Text>
-                <Text strong>{clientStats?.totalContacts ?? "—"}</Text>
+                <Text strong>{clientStats?.totalContacts ?? "-"}</Text>
               </Space>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Opportunities</Text>
-                <Text strong>{clientStats?.totalOpportunities ?? "—"}</Text>
+                <Text strong>{clientStats?.totalOpportunities ?? "-"}</Text>
               </Space>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Contracts</Text>
-                <Text strong>{clientStats?.totalContracts ?? "—"}</Text>
+                <Text strong>{clientStats?.totalContracts ?? "-"}</Text>
               </Space>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Total contract value</Text>
@@ -392,12 +410,12 @@ const ClientsContent = () => {
                         currency: "ZAR",
                         maximumFractionDigits: 0,
                       }).format(clientStats.totalContractValue)
-                    : "—"}
+                    : "-"}
                 </Text>
               </Space>
               <Space style={{ width: "100%", justifyContent: "space-between" }}>
                 <Text>Active opportunities</Text>
-                <Text strong>{clientStats?.activeOpportunities ?? "—"}</Text>
+                <Text strong>{clientStats?.activeOpportunities ?? "-"}</Text>
               </Space>
             </Space>
           ) : null}
@@ -406,7 +424,7 @@ const ClientsContent = () => {
         <Drawer
           title={editingClient ? "Edit Client" : "New Client"}
           open={isModalOpen}
-          width={480}
+          width={isMobile ? "100%" : 480}
           destroyOnClose
           onClose={() => {
             setIsModalOpen(false);
@@ -485,3 +503,4 @@ const ClientsPage = () => (
 );
 
 export default ClientsPage;
+

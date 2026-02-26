@@ -7,6 +7,7 @@ import {
   Card,
   DatePicker,
   Form,
+  Grid,
   Input,
   Modal,
   Select,
@@ -21,8 +22,10 @@ import { useAuthenticationState } from "@/provider";
 import { ProposalProvider, useProposalActions, useProposalState } from "@/provider";
 import type { IProposal } from "@/provider/proposal/context";
 import { getAxiosInstace } from "@/utils/axiosInstance";
+import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const statusColor = (status: number) => {
   switch (status) {
@@ -58,6 +61,9 @@ const formatDate = (date?: string | null) =>
     : "—";
 
 const ProposalsContent = () => {
+  const { styles } = useStyles();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { user } = useAuthenticationState();
   const { getProposals, createProposal, submitProposal, approveProposal, rejectProposal, deleteProposal } =
     useProposalActions();
@@ -223,24 +229,28 @@ const ProposalsContent = () => {
         title: "Title",
         dataIndex: "title",
         key: "title",
+        width: 220,
         render: (text: string | null) => text ?? "Untitled",
       },
       {
         title: "Client",
         dataIndex: "clientName",
         key: "clientName",
+        width: 180,
         render: (text: string | null) => text ?? "—",
       },
       {
         title: "Opportunity",
         dataIndex: "opportunityTitle",
         key: "opportunityTitle",
+        width: 220,
         render: (text: string | null) => text ?? "—",
       },
       {
         title: "Status",
         dataIndex: "status",
         key: "status",
+        width: 140,
         render: (_: number, record) => (
           <Tag color={statusColor(record.status)}>{record.statusName ?? record.status}</Tag>
         ),
@@ -249,21 +259,24 @@ const ProposalsContent = () => {
         title: "Total",
         dataIndex: "totalAmount",
         key: "totalAmount",
+        width: 140,
         render: (_: number, record) => formatCurrency(record.totalAmount, record.currency),
       },
       {
         title: "Valid until",
         dataIndex: "validUntil",
         key: "validUntil",
+        width: 160,
         render: (date: string | null) => formatDate(date),
       },
       {
         title: "Actions",
         key: "actions",
+        width: 220,
         render: (_, record) => {
           const status = record.status;
           return (
-            <Space>
+            <Space wrap size={[6, 6]}>
               {status === 1 && canSubmit ? (
                 <Button size="small" onClick={() => void handleSubmit(record.id)} loading={isPending}>
                   Submit
@@ -291,21 +304,23 @@ const ProposalsContent = () => {
   ];
 
   return (
-    <Card>
+    <Card className={styles.card}>
       {contextHolder}
-      <Space direction="vertical" size={12} style={{ width: "100%" }}>
-        <Space align="center" style={{ width: "100%", justifyContent: "space-between" }}>
-          <div>
-            <Title level={3} style={{ margin: 0 }}>
+      <Space direction="vertical" size={12} className={styles.container}>
+        <div className={styles.headerRow}>
+          <div className={styles.headerText}>
+            <Title level={isMobile ? 4 : 3} className={styles.title}>
               Proposals
             </Title>
-            <Text type="secondary">Manage proposals and approvals.</Text>
+            <Text type="secondary" className={styles.subtitle}>
+              Manage proposals and approvals.
+            </Text>
           </div>
-          <Space>
+          <div className={styles.actions}>
             <Select
               allowClear
               placeholder="Status"
-              style={{ width: 160 }}
+              className={styles.filterSelect}
               onChange={(val) => {
                 setStatusFilter(val);
                 void getProposals({
@@ -331,22 +346,24 @@ const ProposalsContent = () => {
             <Button onClick={() => void getProposals({ pageNumber: 1, pageSize: 25 })} loading={isPending}>
               Refresh
             </Button>
-          </Space>
-        </Space>
+          </div>
+        </div>
 
         {isError && <Alert type="error" showIcon message={errorMessage || "Failed to load proposals."} />}
 
         <Table
+          className={styles.table}
           size="middle"
           rowKey="id"
           columns={columns}
           dataSource={proposals ?? []}
           loading={isPending}
+          scroll={{ x: 1100 }}
           pagination={{
             current: pageNumber ?? 1,
             pageSize: pageSize ?? 25,
             total: totalCount ?? proposals?.length ?? 0,
-            showSizeChanger: true,
+            showSizeChanger: !isMobile,
           }}
           onChange={(pagination) =>
             void getProposals({
@@ -365,6 +382,8 @@ const ProposalsContent = () => {
         onCancel={() => setIsCreateModalOpen(false)}
         okText="Create"
         confirmLoading={isPending}
+        width={isMobile ? "calc(100vw - 24px)" : 640}
+        style={isMobile ? { top: 12 } : undefined}
       >
         <Form form={form} layout="vertical">
           <Form.Item

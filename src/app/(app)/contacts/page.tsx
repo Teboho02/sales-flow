@@ -7,6 +7,7 @@ import {
   Card,
   Drawer,
   Form,
+  Grid,
   Input,
   Popconfirm,
   Select,
@@ -29,9 +30,12 @@ import { getAxiosInstace } from "@/utils/axiosInstance";
 import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const ContactContent = () => {
   const { styles } = useStyles();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { user } = useAuthenticationState();
   const { getContacts, createContact, updateContact, deleteContact, setPrimaryContact } =
     useContactActions();
@@ -197,62 +201,70 @@ const ContactContent = () => {
     {
       title: "Name",
       dataIndex: "firstName",
-        key: "name",
-        render: (_: string, record) =>
-          [record.firstName, record.lastName].filter(Boolean).join(" ") || "—",
-      },
-      {
-        title: "Title",
-        dataIndex: "jobTitle",
-        key: "jobTitle",
-        render: (text: string | null) => text ?? "—",
-      },
-      {
-        title: "Client",
-        dataIndex: "clientName",
-        key: "clientName",
-        render: (text: string | null) => text ?? "—",
-      },
-      {
-        title: "Email",
-        dataIndex: "email",
-        key: "email",
-        render: (text: string | null) =>
-          text ? (
-            <a href={`mailto:${text}`} onClick={(e) => e.stopPropagation()}>
-              {text}
-            </a>
-          ) : (
-            "—"
-          ),
-      },
-      {
-        title: "Phone",
-        dataIndex: "phoneNumber",
-        key: "phoneNumber",
-        render: (text: string | null) => text ?? "—",
-      },
-      {
-        title: "Primary",
-        dataIndex: "isPrimary",
-        key: "isPrimary",
-        render: (val: boolean) =>
-          val ? <Tag color="gold">Primary</Tag> : <Tag color="default">No</Tag>,
-      },
-      {
-        title: "Active",
-        dataIndex: "isActive",
-        key: "isActive",
-        render: (val: boolean) =>
-          val ? <Tag color="green">Active</Tag> : <Tag color="default">Inactive</Tag>,
-      },
+      key: "name",
+      width: 200,
+      render: (_: string, record) =>
+        [record.firstName, record.lastName].filter(Boolean).join(" ") || "-",
+    },
+    {
+      title: "Title",
+      dataIndex: "jobTitle",
+      key: "jobTitle",
+      width: 170,
+      render: (text: string | null) => text ?? "-",
+    },
+    {
+      title: "Client",
+      dataIndex: "clientName",
+      key: "clientName",
+      width: 180,
+      render: (text: string | null) => text ?? "-",
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      width: 220,
+      render: (text: string | null) =>
+        text ? (
+          <a href={`mailto:${text}`} onClick={(e) => e.stopPropagation()}>
+            {text}
+          </a>
+        ) : (
+          "-"
+        ),
+    },
+    {
+      title: "Phone",
+      dataIndex: "phoneNumber",
+      key: "phoneNumber",
+      width: 160,
+      render: (text: string | null) => text ?? "-",
+    },
+    {
+      title: "Primary",
+      dataIndex: "isPrimary",
+      key: "isPrimary",
+      width: 120,
+      render: (val: boolean) =>
+        val ? <Tag color="gold">Primary</Tag> : <Tag color="default">No</Tag>,
+    },
+    {
+      title: "Active",
+      dataIndex: "isActive",
+      key: "isActive",
+      width: 120,
+      render: (val: boolean) =>
+        val ? <Tag color="green">Active</Tag> : <Tag color="default">Inactive</Tag>,
+    },
   ];
   if (canManageContacts) {
     columns.push({
       title: "Actions",
       key: "actions",
+      width: 220,
       render: (_, record) => (
-        <Space>
+        <Space wrap size={[6, 6]}>
           <Button size="small" onClick={() => openEditDrawer(record)}>
             Edit
           </Button>
@@ -283,17 +295,19 @@ const ContactContent = () => {
   }
 
   return (
-    <Card>
+    <Card className={styles.card}>
       {contextHolder}
-      <Space direction="vertical" size={12} style={{ width: "100%" }}>
-        <Space align="center" style={{ width: "100%", justifyContent: "space-between" }}>
-          <div>
-            <Title level={3} style={{ margin: 0 }}>
+      <Space direction="vertical" size={12} className={styles.container}>
+        <div className={styles.headerRow}>
+          <div className={styles.headerText}>
+            <Title level={isMobile ? 4 : 3} className={styles.title}>
               Contacts
             </Title>
-            <Text type="secondary">People linked to clients within your tenant.</Text>
+            <Text type="secondary" className={styles.subtitle}>
+              People linked to clients within your tenant.
+            </Text>
           </div>
-          <Space>
+          <div className={styles.actions}>
             {canManageContacts ? (
               <Button type="primary" onClick={openCreateDrawer}>
                 New Contact
@@ -302,14 +316,14 @@ const ContactContent = () => {
             <Button onClick={() => void fetchContacts(1, pageSize ?? 25)} loading={isPending}>
               Refresh
             </Button>
-          </Space>
-        </Space>
+          </div>
+        </div>
 
         <Space wrap className={styles.filterRow}>
           <Input.Search
             allowClear
             placeholder="Search contacts"
-            style={{ width: 240 }}
+            className={styles.searchInput}
             onSearch={(value) => {
               setSearchTerm(value);
               void getContacts({
@@ -324,7 +338,7 @@ const ContactContent = () => {
           <Select
             allowClear
             placeholder="Client"
-            style={{ width: 220 }}
+            className={styles.filterSelect}
             loading={clientsLoading}
             onChange={(val) => {
               setClientFilter(val);
@@ -344,7 +358,7 @@ const ContactContent = () => {
           <Select
             allowClear
             placeholder="Status"
-            style={{ width: 140 }}
+            className={styles.filterSelect}
             onChange={(val) => {
               const next = val as boolean | undefined;
               setIsActiveFilter(next);
@@ -368,16 +382,18 @@ const ContactContent = () => {
         )}
 
         <Table
-          size="middle"
+          className={styles.table}
+          size={isMobile ? "small" : "middle"}
           rowKey="id"
           columns={columns}
           dataSource={contacts ?? []}
           loading={isPending}
+          scroll={{ x: 1200 }}
           pagination={{
             current: pageNumber ?? 1,
             pageSize: pageSize ?? 25,
             total: totalCount ?? contacts?.length ?? 0,
-            showSizeChanger: true,
+            showSizeChanger: !isMobile,
           }}
           onChange={(pagination) =>
             void fetchContacts(pagination.current ?? 1, pagination.pageSize ?? 25)
@@ -395,7 +411,7 @@ const ContactContent = () => {
       <Drawer
         title={editingContact ? "Edit Contact" : "New Contact"}
         open={isDrawerOpen}
-        width={500}
+        width={isMobile ? "100%" : 500}
         destroyOnClose
         onClose={() => {
           setIsDrawerOpen(false);
@@ -479,3 +495,4 @@ const ContactsPage = () => (
 );
 
 export default ContactsPage;
+

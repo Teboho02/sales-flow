@@ -7,6 +7,7 @@ import {
   Card,
   DatePicker,
   Form,
+  Grid,
   Input,
   InputNumber,
   Modal,
@@ -29,6 +30,7 @@ import { getAxiosInstace } from "@/utils/axiosInstance";
 import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const stageColor = (stage: number) => {
   switch (stage) {
@@ -61,6 +63,8 @@ const formatDate = (date?: string | null) =>
 
 const OpportunitiesView = () => {
   const { styles } = useStyles();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { user } = useAuthenticationState();
   const { getOpportunities, createOpportunity, updateStage, assignOpportunity, deleteOpportunity } =
     useOpportunityActions();
@@ -262,7 +266,7 @@ const OpportunitiesView = () => {
         title: "Actions",
         key: "actions",
         render: (_, record) => (
-          <Space>
+          <Space wrap size={[6, 6]}>
             {canChangeStage && (
               <Button
                 size="small"
@@ -312,7 +316,7 @@ const OpportunitiesView = () => {
         <Space direction="vertical" size={12} style={{ width: "100%" }}>
           <div className={styles.headerRow}>
             <div className={styles.headerText}>
-              <Title level={3} style={{ margin: 0 }}>
+              <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
                 Opportunities
               </Title>
               <Text className={styles.subtitle}>{subtitle}</Text>
@@ -341,16 +345,17 @@ const OpportunitiesView = () => {
           )}
           <Table
             className={styles.table}
-            size="middle"
+            size={isMobile ? "small" : "middle"}
             rowKey="id"
             columns={columns}
             dataSource={opportunities ?? []}
             loading={isPending}
+            scroll={{ x: 1200 }}
             pagination={{
               current: pageNumber ?? 1,
               pageSize: pageSize ?? 25,
               total: totalCount ?? (opportunities?.length ?? 0),
-              showSizeChanger: true,
+              showSizeChanger: !isMobile,
             }}
             onChange={(pagination) =>
               void refreshList(pagination.current ?? 1, pagination.pageSize ?? 25)
@@ -365,6 +370,8 @@ const OpportunitiesView = () => {
         onCancel={() => setIsModalOpen(false)}
         okText="Create"
         confirmLoading={isPending}
+        width={isMobile ? "calc(100vw - 24px)" : 680}
+        style={isMobile ? { top: 12 } : undefined}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="title" label="Title" rules={[{ required: true, message: "Enter a title" }]}>
@@ -444,6 +451,8 @@ const OpportunitiesView = () => {
         onCancel={() => setStageModalOpen(false)}
         okText="Update"
         confirmLoading={isPending}
+        width={isMobile ? "calc(100vw - 24px)" : 520}
+        style={isMobile ? { top: 12 } : undefined}
       >
         <Form form={stageForm} layout="vertical">
           <Form.Item name="newStage" label="Stage" rules={[{ required: true }]}>
@@ -487,6 +496,8 @@ const OpportunitiesView = () => {
         onCancel={() => setAssignModalOpen(false)}
         okText="Assign"
         confirmLoading={isPending}
+        width={isMobile ? "calc(100vw - 24px)" : 520}
+        style={isMobile ? { top: 12 } : undefined}
       >
         <Form form={assignForm} layout="vertical">
           <Form.Item

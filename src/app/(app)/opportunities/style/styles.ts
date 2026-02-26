@@ -1,11 +1,16 @@
 import { createStyles, css } from "antd-style";
 
-export const useStyles = createStyles(() => ({
+export const useStyles = createStyles(({ token }) => ({
   page: css`
     background: linear-gradient(135deg, #e8f1ff 0%, #f7fbff 50%, #ffffff 100%) !important;
     padding: 16px;
     border-radius: 14px;
     min-height: 100%;
+
+    @media (max-width: ${token.screenMD}px) {
+      padding: ${token.paddingXS}px;
+      border-radius: ${token.borderRadius}px;
+    }
   `,
 
   card: css`
@@ -16,6 +21,10 @@ export const useStyles = createStyles(() => ({
     background: #ffffff !important;
     :global(.ant-card-body) {
       padding: 18px 18px 16px;
+
+      @media (max-width: ${token.screenMD}px) {
+        padding: ${token.paddingSM}px;
+      }
     }
   `,
 
@@ -37,17 +46,33 @@ export const useStyles = createStyles(() => ({
     display: flex;
     flex-direction: column;
     gap: 4px;
+
+    @media (max-width: ${token.screenMD}px) {
+      width: 100%;
+    }
   `,
 
   subtitle: css`
     color: #5f708a !important;
     font-size: 13px;
+
+    @media (max-width: ${token.screenMD}px) {
+      font-size: 12px;
+    }
   `,
 
   actions: css`
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+
+    @media (max-width: ${token.screenMD}px) {
+      width: 100%;
+
+      > button {
+        width: 100%;
+      }
+    }
   `,
 
   table: css`
@@ -62,6 +87,10 @@ export const useStyles = createStyles(() => ({
     :global(.ant-table) {
       border-radius: 10px;
       overflow: hidden;
+    }
+
+    :global(.ant-table-thead > tr > th) {
+      white-space: nowrap;
     }
   `,
 
