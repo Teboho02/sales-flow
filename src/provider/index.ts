@@ -4,3 +4,4 @@ export * from "./client";
 export * from "./proposal";
 export * from "./contract";
 export * from "./report";
+export * from "./contact";
