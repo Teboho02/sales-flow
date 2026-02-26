@@ -30,6 +30,10 @@ export const getAxiosInstace = () => {
       if (error?.response?.status === 401 && typeof window !== "undefined") {
         window.localStorage.removeItem("auth_token");
         window.localStorage.removeItem("auth_user");
+        // Redirect softly to login for a clean, predictable recovery
+        if (window.location.pathname !== "/login") {
+          window.location.replace("/login");
+        }
       }
       return Promise.reject(error);
     },

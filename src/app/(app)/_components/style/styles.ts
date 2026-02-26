@@ -77,16 +77,21 @@ export const useStyles = createStyles(({ token }) => ({
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0 24px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 16px;
+
+    @media (max-width: ${token.screenMD}px) {
+      padding: 0 ${token.paddingSM}px;
+      gap: ${token.marginXS}px;
+    }
   `,
 
   headerLeft: css`
     min-width: 0;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    gap: ${token.marginXS}px;
   `,
 
   headerLabel: css`
@@ -100,7 +105,10 @@ export const useStyles = createStyles(({ token }) => ({
     font-size: 18px;
     font-weight: 600;
     line-height: 1.3;
-    margin-top: 2px;
+
+    @media (max-width: ${token.screenMD}px) {
+      font-size: 16px;
+    }
   `,
 
   headerRight: css`
@@ -110,14 +118,34 @@ export const useStyles = createStyles(({ token }) => ({
     justify-content: flex-end;
   `,
 
-  headerCenter: css`
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  searchInput: css`
+    width: 240px;
+
+    .ant-input,
+    .ant-input-affix-wrapper {
+      border-radius: ${token.borderRadiusLG}px;
+      border-color: ${token.colorBorder};
+      background: ${token.colorBgContainer};
+    }
+
+    @media (max-width: ${token.screenMD}px) {
+      width: 180px;
+    }
+
+    @media (max-width: ${token.screenSM}px) {
+      display: none;
+    }
   `,
 
-  searchInput: css`
-    width: min(340px, 56vw);
+  mobileMenuButton: css`
+    color: #ffffff !important;
+    border: none;
+
+    &:hover,
+    &:focus {
+      color: #ffffff !important;
+      background: rgba(255, 255, 255, 0.16) !important;
+    }
   `,
 
   profileAvatar: css`
@@ -126,10 +154,38 @@ export const useStyles = createStyles(({ token }) => ({
     font-weight: 700;
   `,
 
+  mobileDrawer: css`
+    .ant-drawer-content,
+    .ant-drawer-header,
+    .ant-drawer-body {
+      background: #0e0955;
+    }
+
+    .ant-drawer-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px 16px;
+    }
+
+    .ant-drawer-title,
+    .ant-drawer-close {
+      color: #ffffff !important;
+    }
+
+    .ant-drawer-body {
+      padding: 20px 14px;
+    }
+  `,
+
   content: css`
     margin: 20px;
     padding: 20px;
     border-radius: 12px;
     background: ${token.colorBgContainer};
+
+    @media (max-width: ${token.screenMD}px) {
+      margin: ${token.marginSM}px;
+      padding: ${token.paddingSM}px;
+      border-radius: ${token.borderRadius}px;
+    }
   `,
 }));

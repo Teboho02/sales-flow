@@ -77,7 +77,9 @@ export const ClientReducer = handleActions<IClientStateContext, IClientStateCont
     [ClientActionEnums.deleteClientSuccess]: (state, action) => ({
       ...state,
       ...action.payload,
-      clients: state.clients?.filter((c) => c.id !== (action.payload as any).id),
+      clients: state.clients?.filter(
+        (c) => c.id !== (action.payload as IClientStateContext & { id?: string }).id,
+      ),
       client: undefined,
     }),
     [ClientActionEnums.deleteClientError]: (state, action) => ({

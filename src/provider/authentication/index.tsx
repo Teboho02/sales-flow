@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useReducer } from "react";
+import { useCallback, useContext, useEffect, useReducer } from "react";
 import {
   getProfileError,
   getProfilePending,
@@ -118,7 +118,7 @@ export const AuthenticationProvider = ({
   /**
    * On mount: if a token exists, validate it via /api/Auth/me and hydrate the user.
    */
-  const getProfile = async () => {
+  const getProfile = useCallback(async () => {
     const token = getToken();
     if (!token) {
       return;
@@ -146,13 +146,12 @@ export const AuthenticationProvider = ({
         : "Session expired. Please sign in again.";
       dispatch(getProfileError(message));
     }
-  };
+  }, []);
 
   // Restore session on mount
   useEffect(() => {
-    getProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void getProfile();
+  }, [getProfile]);
 
   const register = async (payload: IAuthenticationRegisterPayload): Promise<boolean> => {
     dispatch(registerPending());

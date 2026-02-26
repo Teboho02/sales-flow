@@ -97,7 +97,7 @@ export interface UpdateOpportunityDto {
 }
 
 export interface UpdateStageDto {
-  newStage: number;
+  stage: number;
   notes?: string;
   lossReason?: string;
 }

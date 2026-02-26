@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Button,
   Card,
   DatePicker,
   Form,
+  Grid,
   Input,
   InputNumber,
   Modal,
@@ -18,10 +19,18 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { OpportunityProvider, useOpportunityActions, useOpportunityState } from "@/provider";
+import {
+  OpportunityProvider,
+  useAuthenticationState,
+  useOpportunityActions,
+  useOpportunityState,
+} from "@/provider";
 import type { IOpportunity } from "@/provider/opportunity/context";
+import { getAxiosInstace } from "@/utils/axiosInstance";
+import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const stageColor = (stage: number) => {
   switch (stage) {
@@ -53,7 +62,12 @@ const formatDate = (date?: string | null) =>
   date ? new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(date)) : "—";
 
 const OpportunitiesView = () => {
-  const { getOpportunities, createOpportunity } = useOpportunityActions();
+  const { styles } = useStyles();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+  const { user } = useAuthenticationState();
+  const { getOpportunities, createOpportunity, updateStage, assignOpportunity, deleteOpportunity } =
+    useOpportunityActions();
   const {
     opportunities,
     isPending,
@@ -66,11 +80,64 @@ const OpportunitiesView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const [clients, setClients] = useState<Array<{ id: string; name: string | null }>>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [stageModalOpen, setStageModalOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<IOpportunity | null>(null);
+  const [stageForm] = Form.useForm();
+  const [assignForm] = Form.useForm();
+
+  const roles = user?.roles ?? [];
+  const isAdmin = roles.includes("Admin");
+  const isSalesManager = roles.includes("SalesManager");
+  const isBDM = roles.includes("BusinessDevelopmentManager");
+  const isSalesRep = roles.includes("SalesRep");
+
+  const restrictToOwner = isSalesRep && !isAdmin && !isSalesManager && !isBDM;
+  const ownerFilter = restrictToOwner ? user?.userId : undefined;
+  const canCreate = isAdmin || isSalesManager || isBDM;
+  const canChangeStage = isAdmin || isSalesManager;
+  const canAssign = isAdmin || isSalesManager;
+  const canDelete = isAdmin || isSalesManager;
+
+  const refreshList = (page = pageNumber ?? 1, size = pageSize ?? 25) =>
+    getOpportunities({ pageNumber: page, pageSize: size, ownerId: ownerFilter });
 
   useEffect(() => {
-    void getOpportunities({ pageNumber: 1, pageSize: 25 });
+    if (!user) return;
+    if (restrictToOwner && !ownerFilter) return;
+    void refreshList(1, 25);
+    if (canCreate) {
+      void fetchClients();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.userId, ownerFilter, canCreate, restrictToOwner]);
+
+  const fetchClients = async () => {
+    setClientsLoading(true);
+    try {
+      const instance = getAxiosInstace();
+      const { data } = await instance.get("/api/Clients?pageNumber=1&pageSize=100");
+      if (Array.isArray(data.items)) {
+        const mapped = (data.items as Array<{ id: string; name?: string | null }>).map((c) => ({
+          id: c.id,
+          name: c.name ?? null,
+        }));
+        setClients(mapped);
+      } else if (Array.isArray(data)) {
+        const mapped = (data as Array<{ id: string; name?: string | null }>).map((c) => ({
+          id: c.id,
+          name: c.name ?? null,
+        }));
+        setClients(mapped);
+      }
+    } catch {
+      messageApi.error("Failed to load clients for selection.");
+    } finally {
+      setClientsLoading(false);
+    }
+  };
 
   const handleCreate = async () => {
     try {
@@ -92,18 +159,68 @@ const OpportunitiesView = () => {
         messageApi.success("Opportunity created");
         setIsModalOpen(false);
         form.resetFields();
-        void getOpportunities({ pageNumber: pageNumber ?? 1, pageSize: pageSize ?? 25 });
+        void refreshList(pageNumber ?? 1, pageSize ?? 25);
       }
     } catch {
       // validation errors are handled by antd; API errors already surfaced by provider alert
     }
   };
 
-  const columns: ColumnsType<IOpportunity> = useMemo(
-    () => [
-      {
-        title: "Title",
-        dataIndex: "title",
+  const handleDelete = async (id: string) => {
+    const success = await deleteOpportunity(id);
+    if (success) {
+      messageApi.success("Opportunity deleted");
+      void refreshList(pageNumber ?? 1, pageSize ?? 25);
+    }
+  };
+
+  const handleStageUpdate = async () => {
+    if (!canChangeStage) {
+      messageApi.error("You do not have permission to change opportunity stage.");
+      return;
+    }
+
+    try {
+      const values = await stageForm.validateFields();
+      if (!selectedOpportunity) return;
+      const success = await updateStage(selectedOpportunity.id, {
+        stage: values.newStage,
+        notes: values.notes || undefined,
+        lossReason: values.lossReason || undefined,
+      });
+      if (success) {
+        messageApi.success("Stage updated");
+        setStageModalOpen(false);
+        stageForm.resetFields();
+        void refreshList(pageNumber ?? 1, pageSize ?? 25);
+      }
+    } catch {
+      // handled by antd
+    }
+  };
+
+  const handleAssign = async () => {
+    try {
+      const values = await assignForm.validateFields();
+      if (!selectedOpportunity) return;
+      const success = await assignOpportunity(selectedOpportunity.id, {
+        userId: values.userId,
+      });
+      if (success) {
+        messageApi.success("Assigned");
+        setAssignModalOpen(false);
+        assignForm.resetFields();
+        void refreshList(pageNumber ?? 1, pageSize ?? 25);
+      }
+    } catch {
+      // handled by antd
+    }
+  };
+
+  const columns: ColumnsType<IOpportunity> = [
+    {
+      title: "Title",
+      dataIndex: "title",
         key: "title",
         render: (text: string | null) => text ?? "Untitled",
       },
@@ -145,60 +262,106 @@ const OpportunitiesView = () => {
         key: "ownerName",
         render: (text: string | null) => text ?? "—",
       },
-    ],
-    [],
-  );
+      {
+        title: "Actions",
+        key: "actions",
+        render: (_, record) => (
+          <Space wrap size={[6, 6]}>
+            {canChangeStage && (
+              <Button
+                size="small"
+                onClick={() => {
+                  setSelectedOpportunity(record);
+                  setStageModalOpen(true);
+                  stageForm.setFieldsValue({ newStage: record.stage, notes: undefined, lossReason: undefined });
+                }}
+              >
+                Stage
+              </Button>
+            )}
+            {canAssign && (
+              <Button
+                size="small"
+                onClick={() => {
+                  setSelectedOpportunity(record);
+                  setAssignModalOpen(true);
+                  assignForm.resetFields();
+                }}
+              >
+                Assign
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                size="small"
+                danger
+                onClick={() => handleDelete(record.id)}
+              >
+                Delete
+              </Button>
+            )}
+          </Space>
+        ),
+      },
+  ];
+
+  const subtitle = restrictToOwner
+    ? "Showing only opportunities assigned to you."
+    : "Pipeline scoped to your tenant.";
 
   return (
-    <Card>
-      {contextHolder}
-      <Space direction="vertical" size={12} style={{ width: "100%" }}>
-        <Space align="center" style={{ width: "100%", justifyContent: "space-between" }}>
-          <div>
-            <Title level={3} style={{ margin: 0 }}>
-              Opportunities
-            </Title>
-            <Text type="secondary">Pipeline scoped to your tenant.</Text>
+    <div className={styles.page}>
+      <Card className={styles.card}>
+        {contextHolder}
+        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+          <div className={styles.headerRow}>
+            <div className={styles.headerText}>
+              <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
+                Opportunities
+              </Title>
+              <Text className={styles.subtitle}>{subtitle}</Text>
+            </div>
+            <div className={styles.actions}>
+              {canCreate && (
+                <Button onClick={() => setIsModalOpen(true)} type="primary">
+                  New Opportunity
+                </Button>
+              )}
+              <Button
+                onClick={() => void refreshList(1, pageSize ?? 25)}
+                loading={isPending}
+              >
+                Refresh
+              </Button>
+            </div>
           </div>
-          <Space>
-            <Button onClick={() => setIsModalOpen(true)} type="primary">
-              New Opportunity
-            </Button>
-            <Button
-              onClick={() => void getOpportunities({ pageNumber: 1, pageSize: 25 })}
-              loading={isPending}
-            >
-              Refresh
-            </Button>
-          </Space>
-        </Space>
-        {isError && (
-          <Alert
-            type="error"
-            showIcon
-            message={errorMessage || "Failed to load opportunities."}
+
+          {isError && (
+            <Alert
+              type="error"
+              showIcon
+              message={errorMessage || "Failed to load opportunities."}
+            />
+          )}
+          <Table
+            className={styles.table}
+            size={isMobile ? "small" : "middle"}
+            rowKey="id"
+            columns={columns}
+            dataSource={opportunities ?? []}
+            loading={isPending}
+            scroll={{ x: 1200 }}
+            pagination={{
+              current: pageNumber ?? 1,
+              pageSize: pageSize ?? 25,
+              total: totalCount ?? (opportunities?.length ?? 0),
+              showSizeChanger: !isMobile,
+            }}
+            onChange={(pagination) =>
+              void refreshList(pagination.current ?? 1, pagination.pageSize ?? 25)
+            }
           />
-        )}
-        <Table
-          size="middle"
-          rowKey="id"
-          columns={columns}
-          dataSource={opportunities ?? []}
-          loading={isPending}
-          pagination={{
-            current: pageNumber ?? 1,
-            pageSize: pageSize ?? 25,
-            total: totalCount ?? (opportunities?.length ?? 0),
-            showSizeChanger: true,
-          }}
-          onChange={(pagination) =>
-            void getOpportunities({
-              pageNumber: pagination.current ?? 1,
-              pageSize: pagination.pageSize ?? 25,
-            })
-          }
-        />
-      </Space>
+        </Space>
 
       <Modal
         title="Create Opportunity"
@@ -207,6 +370,8 @@ const OpportunitiesView = () => {
         onCancel={() => setIsModalOpen(false)}
         okText="Create"
         confirmLoading={isPending}
+        width={isMobile ? "calc(100vw - 24px)" : 680}
+        style={isMobile ? { top: 12 } : undefined}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="title" label="Title" rules={[{ required: true, message: "Enter a title" }]}>
@@ -214,17 +379,19 @@ const OpportunitiesView = () => {
           </Form.Item>
           <Form.Item
             name="clientId"
-            label="Client ID"
-            rules={[
-              { required: true, message: "Enter client ID (UUID)" },
-              {
-                pattern:
-                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
-                message: "Enter a valid UUID",
-              },
-            ]}
+            label="Client"
+            rules={[{ required: true, message: "Select a client" }]}
           >
-            <Input placeholder="Client UUID" />
+            <Select
+              showSearch
+              placeholder="Select client"
+              loading={clientsLoading}
+              optionFilterProp="label"
+              options={clients.map((c) => ({
+                label: c.name || c.id,
+                value: c.id,
+              }))}
+            />
           </Form.Item>
           <Form.Item
             name="contactId"
@@ -276,7 +443,81 @@ const OpportunitiesView = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Card>
+
+      <Modal
+        title="Update Stage"
+        open={stageModalOpen}
+        onOk={handleStageUpdate}
+        onCancel={() => setStageModalOpen(false)}
+        okText="Update"
+        confirmLoading={isPending}
+        width={isMobile ? "calc(100vw - 24px)" : 520}
+        style={isMobile ? { top: 12 } : undefined}
+      >
+        <Form form={stageForm} layout="vertical">
+          <Form.Item name="newStage" label="Stage" rules={[{ required: true }]}>
+            <Select
+              options={[
+                { value: 1, label: "Lead" },
+                { value: 2, label: "Qualified" },
+                { value: 3, label: "Proposal" },
+                { value: 4, label: "Negotiation" },
+                { value: 5, label: "Closed Won" },
+                { value: 6, label: "Closed Lost" },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="notes" label="Notes">
+            <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, cur) => prev.newStage !== cur.newStage}
+          >
+            {({ getFieldValue }) =>
+              getFieldValue("newStage") === 6 ? (
+                <Form.Item
+                  name="lossReason"
+                  label="Loss reason"
+                  rules={[{ required: true, message: "Enter loss reason when closing lost" }]}
+                >
+                  <Input />
+                </Form.Item>
+              ) : null
+            }
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Assign Opportunity"
+        open={assignModalOpen}
+        onOk={handleAssign}
+        onCancel={() => setAssignModalOpen(false)}
+        okText="Assign"
+        confirmLoading={isPending}
+        width={isMobile ? "calc(100vw - 24px)" : 520}
+        style={isMobile ? { top: 12 } : undefined}
+      >
+        <Form form={assignForm} layout="vertical">
+          <Form.Item
+            name="userId"
+            label="User ID"
+            rules={[
+              { required: true, message: "Enter user ID (UUID)" },
+              {
+                pattern:
+                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+                message: "Enter a valid UUID",
+              },
+            ]}
+          >
+            <Input placeholder="Assignee user UUID" />
+          </Form.Item>
+        </Form>
+      </Modal>
+      </Card>
+    </div>
   );
 };
 
