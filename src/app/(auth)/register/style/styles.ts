@@ -72,6 +72,19 @@ export const useStyles = createStyles(({ token }) => ({
     flex-direction: column;
     gap: 8px;
   `,
+  segmented: css`
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+
+    .ant-radio-button-wrapper {
+      text-align: center;
+      white-space: normal;
+      height: auto;
+      padding: 10px 12px;
+    }
+  `,
   submitButton: css`
     height: 44px;
     font-weight: 600;
