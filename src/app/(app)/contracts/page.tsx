@@ -80,6 +80,14 @@ const ContractsContent = () => {
     () => user?.roles?.some((r) => ["Admin", "SalesManager"].includes(r)),
     [user?.roles],
   );
+  const canEdit = useMemo(
+    () => user?.roles?.some((r) => ["Admin", "SalesManager", "BusinessDevelopmentManager"].includes(r)),
+    [user?.roles],
+  );
+  const canCreate = useMemo(
+    () => user?.roles?.some((r) => ["Admin", "SalesManager", "BusinessDevelopmentManager"].includes(r)),
+    [user?.roles],
+  );
   const canDelete = useMemo(() => user?.roles?.some((r) => ["Admin"].includes(r)), [user?.roles]);
 
   const fetchLookups = async () => {
@@ -153,6 +161,15 @@ const ContractsContent = () => {
   }, []);
 
   const handleCreateOrUpdate = async () => {
+    if (isEdit && !canEdit) {
+      messageApi.error("You do not have permission to edit contracts.");
+      return;
+    }
+    if (!isEdit && !canCreate) {
+      messageApi.error("You do not have permission to create contracts.");
+      return;
+    }
+
     try {
       const values = await form.validateFields();
       const payload: CreateContractDto & Partial<UpdateContractDto> = {
@@ -263,31 +280,33 @@ const ContractsContent = () => {
         key: "actions",
         render: (_, record) => (
           <Space>
-            <Button
-              size="small"
-              onClick={() => {
-                setIsEdit(true);
-                setSelectedContract(record);
-                setIsModalOpen(true);
-                form.setFieldsValue({
-                  title: record.title ?? "",
-                  clientId: record.clientId,
-                  opportunityId: record.opportunityId || undefined,
-                  proposalId: record.proposalId || undefined,
-                  contractValue: record.contractValue,
-                  currency: record.currency || "ZAR",
-                  startDate: record.startDate ? dayjs(record.startDate) : undefined,
-                  endDate: record.endDate ? dayjs(record.endDate) : undefined,
-                  ownerId: record.ownerId,
-                  renewalNoticePeriod: record.renewalNoticePeriod,
-                  autoRenew: record.autoRenew,
-                  terms: record.terms ?? "",
-                });
-                void fetchOpportunitiesByClient(record.clientId);
-              }}
-            >
-              Edit
-            </Button>
+            {canEdit ? (
+              <Button
+                size="small"
+                onClick={() => {
+                  setIsEdit(true);
+                  setSelectedContract(record);
+                  setIsModalOpen(true);
+                  form.setFieldsValue({
+                    title: record.title ?? "",
+                    clientId: record.clientId,
+                    opportunityId: record.opportunityId || undefined,
+                    proposalId: record.proposalId || undefined,
+                    contractValue: record.contractValue,
+                    currency: record.currency || "ZAR",
+                    startDate: record.startDate ? dayjs(record.startDate) : undefined,
+                    endDate: record.endDate ? dayjs(record.endDate) : undefined,
+                    ownerId: record.ownerId,
+                    renewalNoticePeriod: record.renewalNoticePeriod,
+                    autoRenew: record.autoRenew,
+                    terms: record.terms ?? "",
+                  });
+                  void fetchOpportunitiesByClient(record.clientId);
+                }}
+              >
+                Edit
+              </Button>
+            ) : null}
             {record.status === 1 && canActivate ? (
               <Button size="small" type="primary" onClick={() => void handleActivate(record.id)} loading={isPending}>
                 Activate
@@ -340,9 +359,11 @@ const ContractsContent = () => {
                 { label: "Cancelled", value: 5 },
               ]}
             />
-            <Button type="primary" onClick={() => { setIsModalOpen(true); setIsEdit(false); form.resetFields(); }}>
-              New Contract
-            </Button>
+            {canCreate ? (
+              <Button type="primary" onClick={() => { setIsModalOpen(true); setIsEdit(false); form.resetFields(); }}>
+                New Contract
+              </Button>
+            ) : null}
             <Button onClick={() => void getContracts({ pageNumber: 1, pageSize: 25 })} loading={isPending}>
               Refresh
             </Button>

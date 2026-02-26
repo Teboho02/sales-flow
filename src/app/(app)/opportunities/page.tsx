@@ -93,6 +93,7 @@ const OpportunitiesView = () => {
   const restrictToOwner = isSalesRep && !isAdmin && !isSalesManager && !isBDM;
   const ownerFilter = restrictToOwner ? user?.userId : undefined;
   const canCreate = isAdmin || isSalesManager || isBDM;
+  const canChangeStage = isAdmin || isSalesManager;
   const canAssign = isAdmin || isSalesManager;
   const canDelete = isAdmin || isSalesManager;
 
@@ -170,6 +171,11 @@ const OpportunitiesView = () => {
   };
 
   const handleStageUpdate = async () => {
+    if (!canChangeStage) {
+      messageApi.error("You do not have permission to change opportunity stage.");
+      return;
+    }
+
     try {
       const values = await stageForm.validateFields();
       if (!selectedOpportunity) return;
@@ -257,16 +263,18 @@ const OpportunitiesView = () => {
         key: "actions",
         render: (_, record) => (
           <Space>
-            <Button
-              size="small"
-              onClick={() => {
-                setSelectedOpportunity(record);
-                setStageModalOpen(true);
-                stageForm.setFieldsValue({ newStage: record.stage, notes: undefined, lossReason: undefined });
-              }}
-            >
-              Stage
-            </Button>
+            {canChangeStage && (
+              <Button
+                size="small"
+                onClick={() => {
+                  setSelectedOpportunity(record);
+                  setStageModalOpen(true);
+                  stageForm.setFieldsValue({ newStage: record.stage, notes: undefined, lossReason: undefined });
+                }}
+              >
+                Stage
+              </Button>
+            )}
             {canAssign && (
               <Button
                 size="small"
