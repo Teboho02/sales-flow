@@ -6,24 +6,54 @@ export const useStyles = createStyles(({ token }) => ({
     display: flex;
     width: 100%;
     background: ${token.colorBgContainer};
+
     @media (max-width: 900px) {
       flex-direction: column;
     }
   `,
+
   leftPanel: css`
     flex: 1;
-    background: linear-gradient(135deg, ${token.colorPrimary}, #0f4bb8);
+    background: ${token.colorPrimary};
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 40px 24px;
 
-    @media( max-width: 700){
-      leftPanel {
-      display : none;
-}
+    @media (max-width: 700px) {
+      display: none;
     }
   `,
+
+  leftPanelContent: css`
+    width: min(520px, 100%);
+  `,
+
+  brandRow: css`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  `,
+
+  logoSquare: css`
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: #8bc3ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  `,
+
+  logoLetter: css`
+    color: ${token.colorWhite};
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+  `,
+
   rightPanel: css`
     flex: 1;
     background: ${token.colorBgContainer};
@@ -33,7 +63,7 @@ export const useStyles = createStyles(({ token }) => ({
     padding: 40px 24px;
   `,
   content: css`
-    width: min(460px, 100%);
+    width: min(420px, 100%);
     background: rgba(255, 255, 255, 0.96);
     border-radius: 18px;
     padding: 24px;
@@ -61,17 +91,27 @@ export const useStyles = createStyles(({ token }) => ({
     font-size: 14px;
     color: ${token.colorTextSecondary};
   `,
+
   leftTitle: css`
     margin: 0 !important;
     color: ${token.colorWhite};
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
   `,
+
+  leftSubtitle: css`
+    display: block;
+    max-width: 420px;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 18px;
+    line-height: 1.6;
+  `,
+
   form: css`
     display: flex;
     flex-direction: column;
     gap: 8px;
   `,
+
   segmented: css`
     width: 100%;
     display: grid;
@@ -85,6 +125,7 @@ export const useStyles = createStyles(({ token }) => ({
       padding: 10px 12px;
     }
   `,
+
   submitButton: css`
     height: 44px;
     font-weight: 600;

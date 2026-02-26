@@ -68,9 +68,20 @@ const RegisterView = () => {
   return (
     <div className={styles.pageWrapper}>
       <section className={styles.leftPanel}>
-        <Title level={1} className={styles.leftTitle}>
-          Sales Flow
-        </Title>
+        <div className={styles.leftPanelContent}>
+          <div className={styles.brandRow}>
+            <div className={styles.logoSquare}>
+              <Text className={styles.logoLetter}>S</Text>
+            </div>
+            <Title level={1} className={styles.leftTitle}>
+              Sales Flow
+            </Title>
+          </div>
+          <Text className={styles.leftSubtitle}>
+            Manage government client opportunities, proposals, contracts, and
+            renewals all from one unified platform.
+          </Text>
+        </div>
       </section>
       <section className={styles.rightPanel}>
         <div className={styles.content}>

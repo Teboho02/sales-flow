@@ -2,7 +2,7 @@
 
 import { useContext, useReducer } from "react";
 import axios from "axios";
-import type { ActionFunctionAny } from "redux-actions";
+import type { Action } from "redux-actions";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 import {
   getOpportunitiesReportError,
@@ -26,7 +26,7 @@ export const ReportProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handleError = (
     err: unknown,
-    fallback: ActionFunctionAny<IReportStateContext>,
+    fallback: (message?: string) => Action<IReportStateContext>,
   ) => {
     const message = axios.isAxiosError(err)
       ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message

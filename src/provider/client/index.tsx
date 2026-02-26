@@ -2,7 +2,7 @@
 
 import { useContext, useReducer } from "react";
 import axios from "axios";
-import type { ActionFunctionAny } from "redux-actions";
+import type { Action } from "redux-actions";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 import {
   createClientError,
@@ -54,7 +54,7 @@ export const ClientProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handleError = (
     err: unknown,
-    fallback: ActionFunctionAny<IClientStateContext>,
+    fallback: (message?: string) => Action<IClientStateContext>,
   ) => {
     const message = axios.isAxiosError(err)
       ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message

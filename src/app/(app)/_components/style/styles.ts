@@ -118,6 +118,25 @@ export const useStyles = createStyles(({ token }) => ({
     justify-content: flex-end;
   `,
 
+  searchInput: css`
+    width: 240px;
+
+    .ant-input,
+    .ant-input-affix-wrapper {
+      border-radius: ${token.borderRadiusLG}px;
+      border-color: ${token.colorBorder};
+      background: ${token.colorBgContainer};
+    }
+
+    @media (max-width: ${token.screenMD}px) {
+      width: 180px;
+    }
+
+    @media (max-width: ${token.screenSM}px) {
+      display: none;
+    }
+  `,
+
   mobileMenuButton: css`
     color: #ffffff !important;
     border: none;

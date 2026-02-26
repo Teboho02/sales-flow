@@ -63,7 +63,6 @@ const RegisterForm = ({
         <Radio.Group buttonStyle="solid" className={styles.segmented}>
           <Radio.Button value="newTenant">Create organisation (Admin)</Radio.Button>
           <Radio.Button value="joinTenant">Join existing tenant</Radio.Button>
-          <Radio.Button value="defaultTenant">No organisation / tenant</Radio.Button>
         </Radio.Group>
       </Form.Item>
 
