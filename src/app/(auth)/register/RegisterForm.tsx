@@ -63,27 +63,10 @@ const RegisterForm = ({
         <Radio.Group buttonStyle="solid" className={styles.segmented}>
           <Radio.Button value="newTenant">Create organisation (Admin)</Radio.Button>
           <Radio.Button value="joinTenant">Join existing tenant</Radio.Button>
-          <Radio.Button value="defaultTenant">Use demo tenant</Radio.Button>
         </Radio.Group>
       </Form.Item>
 
-      {accountType === "newTenant" ? (
-        <Alert
-          type="info"
-          showIcon
-          message="You’ll create a new organisation and become its Admin."
-          style={{ marginBottom: 12 }}
-        />
-      ) : null}
 
-      {accountType === "joinTenant" ? (
-        <Alert
-          type="info"
-          showIcon
-          message="You need a Tenant ID from an Admin. Admin role cannot be self-assigned here."
-          style={{ marginBottom: 12 }}
-        />
-      ) : null}
 
       {accountType === "defaultTenant" ? (
         <Alert

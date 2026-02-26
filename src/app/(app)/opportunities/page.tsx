@@ -26,6 +26,7 @@ import {
 } from "@/provider";
 import type { IOpportunity } from "@/provider/opportunity/context";
 import { getAxiosInstace } from "@/utils/axiosInstance";
+import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
 
@@ -59,6 +60,7 @@ const formatDate = (date?: string | null) =>
   date ? new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(date)) : "—";
 
 const OpportunitiesView = () => {
+  const { styles } = useStyles();
   const { user } = useAuthenticationState();
   const { getOpportunities, createOpportunity, updateStage, assignOpportunity, deleteOpportunity } =
     useOpportunityActions();
@@ -296,54 +298,57 @@ const OpportunitiesView = () => {
     : "Pipeline scoped to your tenant.";
 
   return (
-    <Card>
-      {contextHolder}
-      <Space direction="vertical" size={12} style={{ width: "100%" }}>
-        <Space align="center" style={{ width: "100%", justifyContent: "space-between" }}>
-          <div>
-            <Title level={3} style={{ margin: 0 }}>
-              Opportunities
-            </Title>
-            <Text type="secondary">{subtitle}</Text>
-          </div>
-          <Space>
-            {canCreate && (
-              <Button onClick={() => setIsModalOpen(true)} type="primary">
-                New Opportunity
+    <div className={styles.page}>
+      <Card className={styles.card}>
+        {contextHolder}
+        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+          <div className={styles.headerRow}>
+            <div className={styles.headerText}>
+              <Title level={3} style={{ margin: 0 }}>
+                Opportunities
+              </Title>
+              <Text className={styles.subtitle}>{subtitle}</Text>
+            </div>
+            <div className={styles.actions}>
+              {canCreate && (
+                <Button onClick={() => setIsModalOpen(true)} type="primary">
+                  New Opportunity
+                </Button>
+              )}
+              <Button
+                onClick={() => void refreshList(1, pageSize ?? 25)}
+                loading={isPending}
+              >
+                Refresh
               </Button>
-            )}
-            <Button
-              onClick={() => void refreshList(1, pageSize ?? 25)}
-              loading={isPending}
-            >
-              Refresh
-            </Button>
-          </Space>
-        </Space>
-        {isError && (
-          <Alert
-            type="error"
-            showIcon
-            message={errorMessage || "Failed to load opportunities."}
+            </div>
+          </div>
+
+          {isError && (
+            <Alert
+              type="error"
+              showIcon
+              message={errorMessage || "Failed to load opportunities."}
+            />
+          )}
+          <Table
+            className={styles.table}
+            size="middle"
+            rowKey="id"
+            columns={columns}
+            dataSource={opportunities ?? []}
+            loading={isPending}
+            pagination={{
+              current: pageNumber ?? 1,
+              pageSize: pageSize ?? 25,
+              total: totalCount ?? (opportunities?.length ?? 0),
+              showSizeChanger: true,
+            }}
+            onChange={(pagination) =>
+              void refreshList(pagination.current ?? 1, pagination.pageSize ?? 25)
+            }
           />
-        )}
-        <Table
-          size="middle"
-          rowKey="id"
-          columns={columns}
-          dataSource={opportunities ?? []}
-          loading={isPending}
-          pagination={{
-            current: pageNumber ?? 1,
-            pageSize: pageSize ?? 25,
-            total: totalCount ?? (opportunities?.length ?? 0),
-            showSizeChanger: true,
-          }}
-          onChange={(pagination) =>
-            void refreshList(pagination.current ?? 1, pagination.pageSize ?? 25)
-          }
-        />
-      </Space>
+        </Space>
 
       <Modal
         title="Create Opportunity"
@@ -492,7 +497,8 @@ const OpportunitiesView = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Card>
+      </Card>
+    </div>
   );
 };
 
