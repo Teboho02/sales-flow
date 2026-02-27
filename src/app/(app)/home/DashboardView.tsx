@@ -15,7 +15,6 @@ import {
   Skeleton,
 } from "antd";
 import { AudioOutlined, RobotOutlined } from "@ant-design/icons";
-import { useRouter } from "next/navigation";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 import { useStyles } from "./style/styles";
 
@@ -154,7 +153,6 @@ interface SpeechWindow extends Window {
 
 const DashboardView = () => {
   const { styles } = useStyles();
-  const router = useRouter();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [pipelineMetrics, setPipelineMetrics] = useState<PipelineMetrics | null>(null);
   const [topPerformers, setTopPerformers] = useState<SalesPerformance[]>([]);
@@ -165,7 +163,6 @@ const DashboardView = () => {
   const [assistantError, setAssistantError] = useState<string | undefined>(undefined);
   const [assistantResult, setAssistantResult] = useState<AssistantResult | null>(null);
   const [assistantModalOpen, setAssistantModalOpen] = useState(false);
-  const [clientCreateLoading, setClientCreateLoading] = useState(false);
   const [clientCreateError, setClientCreateError] = useState<string | undefined>(undefined);
   const [clientCreateSuccess, setClientCreateSuccess] = useState<string | undefined>(undefined);
   const [clientDraftPreview, setClientDraftPreview] = useState<ClientDraftFields | null>(null);
@@ -330,6 +327,15 @@ const DashboardView = () => {
     setAssistantModalOpen(false);
   };
 
+  const isClientCreationPrompt = (prompt: string): boolean => {
+    const normalized = prompt.toLowerCase();
+    return (
+      /(add|create|new|register)\s+(a\s+)?client/.test(normalized) ||
+      (normalized.includes("client") &&
+        (normalized.includes("add") || normalized.includes("create") || normalized.includes("register")))
+    );
+  };
+
   const askAssistant = async () => {
     if (speechListening) {
       stopSpeechToText();
@@ -352,7 +358,14 @@ const DashboardView = () => {
 
     setAssistantLoading(true);
     setAssistantError(undefined);
+    setClientCreateError(undefined);
+    setClientCreateSuccess(undefined);
     try {
+      if (isClientCreationPrompt(prompt)) {
+        await createClientFromPrompt(prompt);
+        return;
+      }
+
       const response = await fetch("/api/assistant/query", {
         method: "POST",
         headers: {
@@ -389,11 +402,8 @@ const DashboardView = () => {
     }
   };
 
-  const createClientFromPrompt = async () => {
-    if (speechListening) {
-      stopSpeechToText();
-    }
-    const prompt = assistantPrompt.trim();
+  const createClientFromPrompt = async (promptOverride?: string) => {
+    const prompt = (promptOverride ?? assistantPrompt).trim();
     if (!prompt) {
       setClientCreateError("Please describe the client you want to create.");
       return;
@@ -408,10 +418,6 @@ const DashboardView = () => {
       setClientCreateError("You are not authenticated. Please login again.");
       return;
     }
-
-    setClientCreateLoading(true);
-    setClientCreateError(undefined);
-    setClientCreateSuccess(undefined);
 
     try {
       const draftResponse = await fetch("/api/assistant/client-draft", {
@@ -492,8 +498,6 @@ const DashboardView = () => {
           ? err.message
           : "Failed to create client with AI.";
       setClientCreateError(message);
-    } finally {
-      setClientCreateLoading(false);
     }
   };
 
@@ -659,23 +663,6 @@ const DashboardView = () => {
                 autoSize={{ minRows: 4, maxRows: 8 }}
                 placeholder="Example: Who is in my organisation and what roles do they have?"
               />
-              <Space className={styles.speechRow} wrap>
-                <Button
-                  icon={<AudioOutlined />}
-                  className={speechListening ? styles.speechButtonActive : styles.speechButton}
-                  onClick={toggleSpeechToText}
-                  disabled={!speechSupported}
-                >
-                  {speechListening ? "Stop Voice Input" : "Start Voice Input"}
-                </Button>
-                <Text className={styles.speechHint}>
-                  {speechSupported
-                    ? speechListening
-                      ? "Listening... speak now."
-                      : "Live speech-to-text ready."
-                    : "Speech-to-text is not supported in this browser."}
-                </Text>
-              </Space>
               <Space className={styles.assistantActions} wrap>
                 <Button
                   type="primary"
@@ -687,25 +674,21 @@ const DashboardView = () => {
                   Ask AI
                 </Button>
                 <Button
-                  className={styles.assistantClientButton}
-                  loading={clientCreateLoading}
-                  onClick={() => void createClientFromPrompt()}
+                  icon={<AudioOutlined />}
+                  className={speechListening ? styles.speechButtonActive : styles.speechButton}
+                  onClick={toggleSpeechToText}
+                  disabled={!speechSupported}
                 >
-                  Add Client with AI
+                  {speechListening ? "Stop Voice Input" : "Start Voice Input"}
                 </Button>
-                {assistantResult?.navigateTo ? (
-                  <Button
-                    onClick={() => {
-                      if (assistantResult.navigateTo) {
-                        router.push(assistantResult.navigateTo);
-                        closeAssistantModal();
-                      }
-                    }}
-                  >
-                    Go to {assistantResult.navigateTo}
-                  </Button>
-                ) : null}
               </Space>
+              <Text className={styles.speechHint}>
+                {speechSupported
+                  ? speechListening
+                    ? "Listening... speak now."
+                    : "Use voice or text. Say add/create client and click Ask AI."
+                  : "Speech-to-text is not supported in this browser."}
+              </Text>
               {assistantError ? <Alert type="error" showIcon message={assistantError} /> : null}
               {speechError ? <Alert type="error" showIcon message={speechError} /> : null}
               {clientCreateError ? <Alert type="error" showIcon message={clientCreateError} /> : null}

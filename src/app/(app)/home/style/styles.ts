@@ -142,18 +142,6 @@ export const useStyles = createStyles(({ token }) => ({
     }
   `,
 
-  assistantClientButton: css`
-    border: 1px solid ${token.colorSuccess};
-    color: ${token.colorSuccess};
-    background: ${token.colorBgContainer};
-
-    &:hover {
-      border-color: ${token.colorSuccessHover};
-      color: ${token.colorSuccessHover};
-      background: ${token.colorSuccessBg};
-    }
-  `,
-
   assistantCard: css`
     border-radius: 14px;
     box-shadow: 0 8px 20px rgba(15, 41, 83, 0.06);
@@ -242,13 +230,6 @@ export const useStyles = createStyles(({ token }) => ({
       border-color: ${token.colorPrimary};
       box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.12);
     }
-  `,
-
-  speechRow: css`
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: ${token.marginXS}px;
   `,
 
   speechButton: css`
