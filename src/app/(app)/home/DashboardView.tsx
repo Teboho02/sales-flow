@@ -522,9 +522,6 @@ const DashboardView = () => {
           >
             Ask AI
           </Button>
-          <Button type="primary" onClick={() => void fetchData()} loading={loading}>
-            Refresh
-          </Button>
         </Space>
       </section>
 

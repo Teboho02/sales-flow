@@ -525,9 +525,6 @@ const ContractsContent = () => {
                 New Contract
               </Button>
             ) : null}
-            <Button onClick={() => void getContracts({ pageNumber: 1, pageSize: 25 })} loading={isPending}>
-              Refresh
-            </Button>
           </div>
         </div>
 

@@ -313,9 +313,6 @@ const ContactContent = () => {
                 New Contact
               </Button>
             ) : null}
-            <Button onClick={() => void fetchContacts(1, pageSize ?? 25)} loading={isPending}>
-              Refresh
-            </Button>
           </div>
         </div>
 

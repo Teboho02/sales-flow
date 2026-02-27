@@ -389,12 +389,6 @@ const OpportunitiesView = () => {
                   New Opportunity
                 </Button>
               )}
-              <Button
-                onClick={() => void refreshList(1, pageSize ?? 25)}
-                loading={isPending}
-              >
-                Refresh
-              </Button>
             </div>
           </div>
 

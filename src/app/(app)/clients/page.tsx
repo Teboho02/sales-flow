@@ -20,7 +20,7 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { ClientProvider, useAuthenticationState, useClientActions, useClientState } from "@/provider";
-import type { CreateClientDto, IClient } from "@/provider/client/context";
+import type { IClient } from "@/provider/client/context";
 import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
@@ -31,12 +31,6 @@ const clientTypeLabel: Record<number, string> = {
   2: "Private",
   3: "Partner",
 };
-
-interface ClientDraftAiResponse {
-  fields?: Partial<CreateClientDto>;
-  notes?: string[];
-  message?: string;
-}
 
 const ClientsContent = () => {
   const { styles } = useStyles();
@@ -63,10 +57,6 @@ const ClientsContent = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [clientTypeFilter, setClientTypeFilter] = useState<number | undefined>(undefined);
   const [isActiveFilter, setIsActiveFilter] = useState<boolean | undefined>(undefined);
-  const [clientAiPrompt, setClientAiPrompt] = useState("");
-  const [clientAiLoading, setClientAiLoading] = useState(false);
-  const [clientAiError, setClientAiError] = useState<string | undefined>(undefined);
-  const [clientAiNotes, setClientAiNotes] = useState<string[]>([]);
 
   const { user } = useAuthenticationState();
   const roles = user?.roles ?? [];
@@ -79,13 +69,6 @@ const ClientsContent = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const resetClientAiState = () => {
-    setClientAiPrompt("");
-    setClientAiLoading(false);
-    setClientAiError(undefined);
-    setClientAiNotes([]);
-  };
-
   const openCreateModal = () => {
     if (!canManageClients) {
       messageApi.warning("You don't have permission to create clients.");
@@ -93,7 +76,6 @@ const ClientsContent = () => {
     }
     setEditingClient(null);
     form.resetFields();
-    resetClientAiState();
     setIsModalOpen(true);
   };
 
@@ -103,7 +85,6 @@ const ClientsContent = () => {
       return;
     }
     setEditingClient(client);
-    resetClientAiState();
     form.setFieldsValue({
       name: client.name ?? "",
       clientType: client.clientType,
@@ -115,87 +96,6 @@ const ClientsContent = () => {
       isActive: client.isActive,
     });
     setIsModalOpen(true);
-  };
-
-  const applyClientDraftFromAi = async () => {
-    const prompt = clientAiPrompt.trim();
-    if (!prompt) {
-      setClientAiError("Enter a prompt describing the client you want to add.");
-      return;
-    }
-
-    const token =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem("auth_token")
-        : null;
-
-    if (!token) {
-      setClientAiError("You are not authenticated. Please login again.");
-      return;
-    }
-
-    setClientAiLoading(true);
-    setClientAiError(undefined);
-
-    try {
-      const response = await fetch("/api/assistant/client-draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ prompt }),
-      });
-
-      const data = (await response.json()) as ClientDraftAiResponse;
-      if (!response.ok) {
-        throw new Error(
-          typeof data.message === "string" && data.message.trim()
-            ? data.message
-            : "Failed to generate client details.",
-        );
-      }
-
-      const fields = data.fields ?? {};
-      const candidateType = Number(fields.clientType);
-      const validClientType = [1, 2, 3].includes(candidateType)
-        ? candidateType
-        : undefined;
-
-      form.setFieldsValue({
-        name: typeof fields.name === "string" ? fields.name : form.getFieldValue("name"),
-        clientType: validClientType ?? form.getFieldValue("clientType"),
-        industry:
-          typeof fields.industry === "string"
-            ? fields.industry
-            : form.getFieldValue("industry"),
-        companySize:
-          typeof fields.companySize === "string"
-            ? fields.companySize
-            : form.getFieldValue("companySize"),
-        website:
-          typeof fields.website === "string"
-            ? fields.website
-            : form.getFieldValue("website"),
-        billingAddress:
-          typeof fields.billingAddress === "string"
-            ? fields.billingAddress
-            : form.getFieldValue("billingAddress"),
-        taxNumber:
-          typeof fields.taxNumber === "string"
-            ? fields.taxNumber
-            : form.getFieldValue("taxNumber"),
-      });
-
-      setClientAiNotes(Array.isArray(data.notes) ? data.notes : []);
-      messageApi.success("AI draft applied. Review and click Create.");
-    } catch (err: unknown) {
-      setClientAiError(
-        err instanceof Error ? err.message : "Failed to generate client details.",
-      );
-    } finally {
-      setClientAiLoading(false);
-    }
   };
 
   const handleSubmit = async () => {
@@ -372,20 +272,6 @@ const ClientsContent = () => {
                   New Client
                 </Button>
               ) : null}
-              <Button
-                onClick={() =>
-                  void getClients({
-                    pageNumber: 1,
-                    pageSize: pageSize ?? 25,
-                    searchTerm: searchTerm || undefined,
-                    clientType: clientTypeFilter,
-                    isActive: isActiveFilter,
-                  })
-                }
-                loading={isPending}
-              >
-                Refresh
-              </Button>
             </div>
           </div>
 
@@ -548,46 +434,6 @@ const ClientsContent = () => {
             </Space>
           }
         >
-          {!editingClient ? (
-            <div className={styles.aiPromptPanel}>
-              <Text className={styles.aiPromptLabel}>Add Client With AI Prompt</Text>
-              <Text className={styles.aiPromptHint}>
-                Example: Add a private client named ACME Labs in fintech, 200-500 employees, website acme.co.za, Johannesburg billing address.
-              </Text>
-              <Input.TextArea
-                value={clientAiPrompt}
-                onChange={(event) => setClientAiPrompt(event.target.value)}
-                autoSize={{ minRows: 3, maxRows: 6 }}
-                placeholder="Describe the client in plain language."
-              />
-              <Space>
-                <Button
-                  className={styles.aiPromptButton}
-                  loading={clientAiLoading}
-                  onClick={() => void applyClientDraftFromAi()}
-                >
-                  Generate Fields
-                </Button>
-                <Button
-                  onClick={() => {
-                    resetClientAiState();
-                  }}
-                >
-                  Clear
-                </Button>
-              </Space>
-              {clientAiError ? <Alert type="error" showIcon message={clientAiError} /> : null}
-              {clientAiNotes.length > 0 ? (
-                <div className={styles.aiNotes}>
-                  {clientAiNotes.map((note) => (
-                    <Text key={note} className={styles.aiNoteItem}>
-                      • {note}
-                    </Text>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
           <Form form={form} layout="vertical">
             <Form.Item
               name="name"
@@ -643,4 +489,5 @@ const ClientsPage = () => (
 );
 
 export default ClientsPage;
+
 

@@ -537,9 +537,6 @@ const ActivitiesContent = () => {
               <Button type="primary" onClick={openCreateModal}>
                 New Activity
               </Button>
-              <Button onClick={() => void refreshList()} loading={isPending}>
-                Refresh
-              </Button>
             </div>
           </div>
 
