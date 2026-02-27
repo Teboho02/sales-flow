@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import {
   Alert,
   Button,
@@ -61,6 +62,28 @@ const formatDate = (date?: string | null) =>
       )
     : "—";
 
+type TermsAiMode = "draft" | "improve";
+
+interface TermsAiResponse {
+  terms: string;
+  notes: string[];
+}
+
+interface ContractFormValues {
+  title: string;
+  clientId: string;
+  opportunityId?: string;
+  proposalId?: string;
+  contractValue: number;
+  currency?: string;
+  startDate?: Dayjs;
+  endDate?: Dayjs;
+  ownerId: string;
+  renewalNoticePeriod: number;
+  autoRenew?: boolean;
+  terms?: string;
+}
+
 const ContractsContent = () => {
   const { styles } = useStyles();
   const screens = useBreakpoint();
@@ -71,8 +94,9 @@ const ContractsContent = () => {
   const { contracts, isPending, isError, errorMessage, pageNumber, pageSize, totalCount } = useContractState();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTermsAiModalOpen, setIsTermsAiModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<ContractFormValues>();
   const [messageApi, contextHolder] = message.useMessage();
   const [clients, setClients] = useState<Array<{ id: string; name: string | null }>>([]);
   const [opportunities, setOpportunities] = useState<
@@ -81,6 +105,12 @@ const ContractsContent = () => {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
   const [selectedContract, setSelectedContract] = useState<IContract | null>(null);
+  const [termsAiMode, setTermsAiMode] = useState<TermsAiMode>("draft");
+  const [termsAiInstruction, setTermsAiInstruction] = useState("");
+  const [termsAiLoading, setTermsAiLoading] = useState(false);
+  const [termsAiError, setTermsAiError] = useState<string | undefined>(undefined);
+  const [termsAiResult, setTermsAiResult] = useState("");
+  const [termsAiNotes, setTermsAiNotes] = useState<string[]>([]);
 
   const canActivate = useMemo(
     () => user?.roles?.some((r) => ["Admin", "SalesManager"].includes(r)),
@@ -163,6 +193,118 @@ const ContractsContent = () => {
     }
   };
 
+  const openTermsAiModal = () => {
+    const existingTerms = String(form.getFieldValue("terms") ?? "").trim();
+    setTermsAiMode(existingTerms ? "improve" : "draft");
+    setTermsAiInstruction("");
+    setTermsAiError(undefined);
+    setTermsAiResult("");
+    setTermsAiNotes([]);
+    setIsTermsAiModalOpen(true);
+  };
+
+  const askTermsAssistant = async () => {
+    const token =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem("auth_token")
+        : null;
+    if (!token) {
+      setTermsAiError("You are not authenticated. Please login again.");
+      return;
+    }
+
+    const values = form.getFieldsValue([
+      "title",
+      "clientId",
+      "proposalId",
+      "contractValue",
+      "currency",
+      "startDate",
+      "endDate",
+      "autoRenew",
+      "renewalNoticePeriod",
+      "terms",
+    ]) as Partial<ContractFormValues>;
+
+    const currentTerms = String(values.terms ?? "");
+    if (termsAiMode === "improve" && !currentTerms.trim()) {
+      setTermsAiError("Add existing terms first, then run review and improvement.");
+      return;
+    }
+
+    const clientName = clients.find((item) => item.id === values.clientId)?.name ?? "";
+    const startDate = values.startDate ? dayjs(values.startDate).toISOString() : "";
+    const endDate = values.endDate ? dayjs(values.endDate).toISOString() : "";
+
+    setTermsAiLoading(true);
+    setTermsAiError(undefined);
+
+    try {
+      const response = await fetch("/api/assistant/contract-terms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          mode: termsAiMode,
+          instruction: termsAiInstruction.trim() || undefined,
+          currentTerms: currentTerms || undefined,
+          contract: {
+            title: values.title ?? "",
+            clientName,
+            proposalId: values.proposalId ?? "",
+            contractValue:
+              values.contractValue != null && Number.isFinite(Number(values.contractValue))
+                ? Number(values.contractValue)
+                : undefined,
+            currency: values.currency ?? "ZAR",
+            startDate,
+            endDate,
+            renewalNoticePeriod:
+              values.renewalNoticePeriod != null
+                ? Number(values.renewalNoticePeriod)
+                : undefined,
+            autoRenew: Boolean(values.autoRenew),
+          },
+        }),
+      });
+
+      const data = (await response.json()) as Partial<TermsAiResponse> & { message?: string };
+      if (!response.ok) {
+        throw new Error(
+          typeof data.message === "string" && data.message.trim()
+            ? data.message
+            : "Failed to get AI contract terms.",
+        );
+      }
+
+      const generatedTerms =
+        typeof data.terms === "string" ? data.terms.trim() : "";
+      if (!generatedTerms) {
+        throw new Error("AI did not return contract terms. Please try again.");
+      }
+
+      setTermsAiResult(generatedTerms);
+      setTermsAiNotes(Array.isArray(data.notes) ? data.notes.filter((n) => typeof n === "string") : []);
+    } catch (err: unknown) {
+      setTermsAiError(
+        err instanceof Error ? err.message : "Failed to get AI contract terms.",
+      );
+    } finally {
+      setTermsAiLoading(false);
+    }
+  };
+
+  const applyTermsFromAssistant = () => {
+    if (!termsAiResult.trim()) {
+      setTermsAiError("Generate or review terms first.");
+      return;
+    }
+    form.setFieldValue("terms", termsAiResult);
+    setIsTermsAiModalOpen(false);
+  };
+
   useEffect(() => {
     void getContracts({ pageNumber: 1, pageSize: 25 });
     void fetchLookups();
@@ -188,8 +330,8 @@ const ContractsContent = () => {
         proposalId: values.proposalId || undefined,
         contractValue: Number(values.contractValue),
         currency: values.currency || "ZAR",
-        startDate: values.startDate ? values.startDate.toISOString() : undefined,
-        endDate: values.endDate ? values.endDate.toISOString() : undefined,
+        startDate: values.startDate!.toISOString(),
+        endDate: values.endDate!.toISOString(),
         ownerId: values.ownerId,
         renewalNoticePeriod: Number(values.renewalNoticePeriod),
         autoRenew: values.autoRenew ?? false,
@@ -383,9 +525,6 @@ const ContractsContent = () => {
                 New Contract
               </Button>
             ) : null}
-            <Button onClick={() => void getContracts({ pageNumber: 1, pageSize: 25 })} loading={isPending}>
-              Refresh
-            </Button>
           </div>
         </div>
 
@@ -525,10 +664,81 @@ const ContractsContent = () => {
               ]}
             />
           </Form.Item>
-          <Form.Item name="terms" label="Terms">
-            <Input.TextArea rows={3} />
+          <Form.Item
+            name="terms"
+            label={
+              <div className={styles.termsLabelRow}>
+                <span>Terms</span>
+                <Button
+                  size="small"
+                  className={styles.termsAiButton}
+                  onClick={openTermsAiModal}
+                >
+                  AI Assist
+                </Button>
+              </div>
+            }
+          >
+            <Input.TextArea rows={4} placeholder="Enter terms or use AI Assist to generate/review." />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="AI Terms Assistant"
+        open={isTermsAiModalOpen}
+        onCancel={() => setIsTermsAiModalOpen(false)}
+        footer={null}
+        width={isMobile ? "calc(100vw - 24px)" : 760}
+        style={isMobile ? { top: 12 } : undefined}
+      >
+        <Space direction="vertical" size={12} className={styles.termsAiModalBody}>
+          <Text type="secondary" className={styles.termsAiHint}>
+            Draft new contract terms or review grammar and spelling for existing terms. Always do a final legal review before sending.
+          </Text>
+          <Space wrap>
+            <Select<TermsAiMode>
+              value={termsAiMode}
+              style={{ width: 220 }}
+              onChange={(value) => setTermsAiMode(value)}
+              options={[
+                { label: "Draft Contract Terms", value: "draft" },
+                { label: "Review Grammar & Spelling", value: "improve" },
+              ]}
+            />
+            <Button type="primary" loading={termsAiLoading} onClick={() => void askTermsAssistant()}>
+              {termsAiMode === "draft" ? "Generate Draft" : "Review Terms"}
+            </Button>
+          </Space>
+          <Input.TextArea
+            value={termsAiInstruction}
+            onChange={(event) => setTermsAiInstruction(event.target.value)}
+            autoSize={{ minRows: 2, maxRows: 4 }}
+            placeholder="Optional instructions, e.g. formal tone, include cancellation clause, monthly billing."
+          />
+          {termsAiError ? <Alert type="error" showIcon message={termsAiError} /> : null}
+          <Input.TextArea
+            value={termsAiResult}
+            onChange={(event) => setTermsAiResult(event.target.value)}
+            autoSize={{ minRows: 8, maxRows: 14 }}
+            placeholder="AI-generated terms will appear here."
+          />
+          {termsAiNotes.length ? (
+            <div className={styles.termsAiNotes}>
+              {termsAiNotes.map((note) => (
+                <Text key={note} className={styles.termsAiNoteItem}>
+                  • {note}
+                </Text>
+              ))}
+            </div>
+          ) : null}
+          <Space>
+            <Button type="primary" onClick={applyTermsFromAssistant} disabled={!termsAiResult.trim()}>
+              Use in Contract
+            </Button>
+            <Button onClick={() => setIsTermsAiModalOpen(false)}>Close</Button>
+          </Space>
+        </Space>
       </Modal>
     </Card>
   );

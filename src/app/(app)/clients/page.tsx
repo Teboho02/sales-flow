@@ -272,20 +272,6 @@ const ClientsContent = () => {
                   New Client
                 </Button>
               ) : null}
-              <Button
-                onClick={() =>
-                  void getClients({
-                    pageNumber: 1,
-                    pageSize: pageSize ?? 25,
-                    searchTerm: searchTerm || undefined,
-                    clientType: clientTypeFilter,
-                    isActive: isActiveFilter,
-                  })
-                }
-                loading={isPending}
-              >
-                Refresh
-              </Button>
             </div>
           </div>
 
@@ -503,4 +489,5 @@ const ClientsPage = () => (
 );
 
 export default ClientsPage;
+
 

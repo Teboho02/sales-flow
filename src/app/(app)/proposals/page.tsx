@@ -343,9 +343,6 @@ const ProposalsContent = () => {
                 New Proposal
               </Button>
             ) : null}
-            <Button onClick={() => void getProposals({ pageNumber: 1, pageSize: 25 })} loading={isPending}>
-              Refresh
-            </Button>
           </div>
         </div>
 
