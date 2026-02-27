@@ -17,6 +17,8 @@ import { useStyles } from "./style/styles";
 
 const { Text } = Typography;
 
+const formatPercent = (value: number) => `${Math.round(value)}%`;
+
 type StageMetrics = {
   stage: number;
   stageName: string | null;
@@ -146,20 +148,16 @@ const DashboardView = () => {
                 <Text className={styles.metricValue}>
                   {pipelineMetrics?.activeOpportunities ?? "—"}
                 </Text>
-                <Text type="secondary">
-                  Weighted pipeline {pipelineMetrics?.weightedPipelineValue?.toLocaleString("en-ZA") ?? "—"}
-                </Text>
+             
               </Space>
             </Card>
             <Card className={styles.metricCard}>
               <Space direction="vertical" size={6}>
                 <Text className={styles.metricLabel}>Win rate</Text>
                 <Text className={styles.metricValue}>
-                  {pipelineMetrics?.winRate != null ? `${pipelineMetrics.winRate}%` : "—"}
+                  {pipelineMetrics?.winRate != null ? formatPercent(pipelineMetrics.winRate) : "—"}
                 </Text>
-                <Text type="secondary">
-                  Total pipeline {pipelineMetrics?.totalPipelineValue?.toLocaleString("en-ZA") ?? "—"}
-                </Text>
+             
               </Space>
             </Card>
             <Card className={styles.metricCard}>
@@ -238,7 +236,7 @@ const DashboardView = () => {
                     title: "Win rate",
                     dataIndex: "winRate",
                     key: "winRate",
-                    render: (val: number) => `${val}%`,
+                    render: (val: number) => `${val.toFixed(2)}%`,
                   },
                 ]}
               />

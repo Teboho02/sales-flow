@@ -4,6 +4,7 @@ import { Avatar, Button, Drawer, Grid, Layout, Menu } from "antd";
 import type { MenuProps } from "antd";
 import {
   BarChartOutlined,
+  CalendarOutlined,
   FileDoneOutlined,
   FileTextOutlined,
   LineChartOutlined,
@@ -30,6 +31,7 @@ const routeLabelMap: Record<string, string> = {
   "/opportunities": "Opportunities",
   "/proposals": "Proposals",
   "/contracts": "Contracts",
+  "/activities": "Activities",
   "/clients": "Clients",
   "/contacts": "Contacts",
   "/reports": "Reports",
@@ -40,6 +42,7 @@ const routeMenuKeyMap: Record<string, string> = {
   "/opportunities": "opportunities",
   "/proposals": "proposals",
   "/contracts": "contracts",
+  "/activities": "activities",
   "/clients": "clients",
   "/contacts": "contacts",
   "/reports": "reports",
@@ -116,6 +119,12 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
             icon: <FileDoneOutlined />,
             label: "Contracts",
             onClick: () => handleNavigate("/contracts"),
+          },
+          {
+            key: "activities",
+            icon: <CalendarOutlined />,
+            label: "Activities",
+            onClick: () => handleNavigate("/activities"),
           },
         ],
       },

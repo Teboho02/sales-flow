@@ -61,6 +61,22 @@ const formatCurrency = (value: number, currency?: string | null) =>
 const formatDate = (date?: string | null) =>
   date ? new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(date)) : "—";
 
+const formatUserLabel = (user: {
+  id: string;
+  fullName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+}) => {
+  const fullName =
+    user.fullName ??
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ??
+    "";
+  const safeFullName = fullName || "Unnamed user";
+  const emailPart = user.email ? ` (${user.email})` : "";
+  return `${safeFullName}${emailPart}`;
+};
+
 const OpportunitiesView = () => {
   const { styles } = useStyles();
   const screens = useBreakpoint();
@@ -82,6 +98,14 @@ const OpportunitiesView = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [clients, setClients] = useState<Array<{ id: string; name: string | null }>>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [users, setUsers] = useState<Array<{
+    id: string;
+    fullName?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+  }>>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [stageModalOpen, setStageModalOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<IOpportunity | null>(null);
@@ -111,8 +135,11 @@ const OpportunitiesView = () => {
     if (canCreate) {
       void fetchClients();
     }
+    if (canAssign) {
+      void fetchUsers();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.userId, ownerFilter, canCreate, restrictToOwner]);
+  }, [user?.userId, ownerFilter, canCreate, canAssign, restrictToOwner]);
 
   const fetchClients = async () => {
     setClientsLoading(true);
@@ -136,6 +163,41 @@ const OpportunitiesView = () => {
       messageApi.error("Failed to load clients for selection.");
     } finally {
       setClientsLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const instance = getAxiosInstace();
+      const { data } = await instance.get("/api/users?pageNumber=1&pageSize=200");
+      const rawItems = Array.isArray(data?.items)
+        ? data.items
+        : Array.isArray(data)
+          ? data
+          : [];
+
+      const mapped = (
+        rawItems as Array<{
+          id: string;
+          fullName?: string | null;
+          firstName?: string | null;
+          lastName?: string | null;
+          email?: string | null;
+        }>
+      ).map((u) => ({
+        id: u.id,
+        fullName: u.fullName ?? null,
+        firstName: u.firstName ?? null,
+        lastName: u.lastName ?? null,
+        email: u.email ?? null,
+      }));
+      setUsers(mapped);
+    } catch {
+      setUsers([]);
+      messageApi.error("Failed to load users for assignment.");
+    } finally {
+      setUsersLoading(false);
     }
   };
 
@@ -285,7 +347,7 @@ const OpportunitiesView = () => {
                 onClick={() => {
                   setSelectedOpportunity(record);
                   setAssignModalOpen(true);
-                  assignForm.resetFields();
+                  assignForm.setFieldsValue({ userId: record.ownerId || undefined });
                 }}
               >
                 Assign
@@ -503,16 +565,18 @@ const OpportunitiesView = () => {
           <Form.Item
             name="userId"
             label="User ID"
-            rules={[
-              { required: true, message: "Enter user ID (UUID)" },
-              {
-                pattern:
-                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
-                message: "Enter a valid UUID",
-              },
-            ]}
+            rules={[{ required: true, message: "Select assignee" }]}
           >
-            <Input placeholder="Assignee user UUID" />
+            <Select
+              showSearch
+              loading={usersLoading}
+              optionFilterProp="label"
+              placeholder="Select assignee"
+              options={users.map((u) => ({
+                label: formatUserLabel(u),
+                value: u.id,
+              }))}
+            />
           </Form.Item>
         </Form>
       </Modal>
