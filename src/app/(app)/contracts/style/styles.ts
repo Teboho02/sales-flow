@@ -59,4 +59,43 @@ export const useStyles = createStyles(({ token }) => ({
       white-space: nowrap;
     }
   `,
+
+  termsLabelRow: css`
+    display: inline-flex;
+    align-items: center;
+    gap: ${token.marginXS}px;
+  `,
+
+  termsAiButton: css`
+    border: 1px solid ${token.colorPrimary};
+    color: ${token.colorPrimary};
+    background: ${token.colorBgContainer};
+
+    &:hover {
+      border-color: ${token.colorPrimaryHover};
+      color: ${token.colorPrimaryHover};
+      background: ${token.colorPrimaryBg};
+    }
+  `,
+
+  termsAiModalBody: css`
+    width: 100%;
+  `,
+
+  termsAiHint: css`
+    display: block;
+  `,
+
+  termsAiNotes: css`
+    border: 1px solid ${token.colorBorderSecondary};
+    background: ${token.colorFillAlter};
+    border-radius: ${token.borderRadius}px;
+    padding: ${token.paddingSM}px;
+  `,
+
+  termsAiNoteItem: css`
+    display: block;
+    color: ${token.colorTextSecondary};
+    line-height: 1.5;
+  `,
 }));

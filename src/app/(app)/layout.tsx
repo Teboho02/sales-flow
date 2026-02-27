@@ -9,6 +9,7 @@ import {
   FileTextOutlined,
   LineChartOutlined,
   MenuOutlined,
+  RobotOutlined,
   TeamOutlined,
   UnorderedListOutlined,
   UserOutlined,
@@ -34,6 +35,7 @@ const routeLabelMap: Record<string, string> = {
   "/activities": "Activities",
   "/clients": "Clients",
   "/contacts": "Contacts",
+  "/assistant": "AI Assistant",
   "/reports": "Reports",
 };
 
@@ -45,6 +47,7 @@ const routeMenuKeyMap: Record<string, string> = {
   "/activities": "activities",
   "/clients": "clients",
   "/contacts": "contacts",
+  "/assistant": "assistant",
   "/reports": "reports",
 };
 
@@ -157,6 +160,12 @@ const AppGroupLayout = ({ children }: AppGroupLayoutProps) => {
             icon: <LineChartOutlined />,
             label: "Reports",
             onClick: () => handleNavigate("/reports"),
+          },
+          {
+            key: "assistant",
+            icon: <RobotOutlined />,
+            label: "AI Assistant",
+            onClick: () => handleNavigate("/assistant"),
           },
         ],
       },
