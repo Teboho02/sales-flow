@@ -100,8 +100,10 @@ const ContractsContent = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [clients, setClients] = useState<Array<{ id: string; name: string | null }>>([]);
   const [opportunities, setOpportunities] = useState<
-    Array<{ id: string; title: string | null; clientName: string | null }>
+    Array<{ id: string; title: string | null; clientName: string | null; ownerId: string | null; ownerName: string | null }>
   >([]);
+  const [users, setUsers] = useState<Array<{ id: string; label: string }>>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [proposals, setProposals] = useState<
     Array<{ id: string; label: string }>
   >([]);
@@ -159,11 +161,13 @@ const ContractsContent = () => {
           ? oppRes.data
           : [];
       setOpportunities(
-        (oppItemsRaw as Array<{ id: string; title?: string | null; clientName?: string | null }>).map(
+        (oppItemsRaw as Array<{ id: string; title?: string | null; clientName?: string | null; ownerId?: string | null; ownerName?: string | null }>).map(
           (o) => ({
             id: o.id,
             title: o.title ?? null,
             clientName: o.clientName ?? null,
+            ownerId: o.ownerId ?? null,
+            ownerName: o.ownerName ?? null,
           }),
         ),
       );
@@ -182,11 +186,13 @@ const ContractsContent = () => {
       const { data } = await instance.get(`/api/Opportunities?pageNumber=1&pageSize=100${qs}`);
       const oppItems = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
       setOpportunities(
-        (oppItems as Array<{ id: string; title?: string | null; clientName?: string | null }>).map(
+        (oppItems as Array<{ id: string; title?: string | null; clientName?: string | null; ownerId?: string | null; ownerName?: string | null }>).map(
           (o) => ({
             id: o.id,
             title: o.title ?? null,
             clientName: o.clientName ?? null,
+            ownerId: o.ownerId ?? null,
+            ownerName: o.ownerName ?? null,
           }),
         ),
       );
@@ -194,6 +200,27 @@ const ContractsContent = () => {
       messageApi.error("Failed to load opportunities.");
     } finally {
       setLookupLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const instance = getAxiosInstace();
+      const { data } = await instance.get("/api/users?pageNumber=1&pageSize=200");
+      const raw = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+      setUsers(
+        (raw as Array<{ id: string; firstName?: string | null; lastName?: string | null; email?: string | null }>).map(
+          (u) => ({
+            id: u.id,
+            label: [`${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(), u.email].filter(Boolean).join(" — ") || u.id,
+          }),
+        ),
+      );
+    } catch {
+      setUsers([]);
+    } finally {
+      setUsersLoading(false);
     }
   };
 
@@ -332,6 +359,7 @@ const ContractsContent = () => {
   useEffect(() => {
     void getContracts({ pageNumber: 1, pageSize: 25 });
     void fetchLookups();
+    void fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -633,6 +661,11 @@ const ContractsContent = () => {
               onChange={(val) => {
                 form.setFieldsValue({ proposalId: undefined });
                 void fetchProposalsByOpportunity(val);
+                // Auto-fill owner from the selected opportunity
+                const opp = opportunities.find((o) => o.id === val);
+                if (opp?.ownerId) {
+                  form.setFieldsValue({ ownerId: opp.ownerId });
+                }
               }}
               options={opportunities.map((o) => ({
                 label: o.title || o.id,
@@ -690,10 +723,16 @@ const ContractsContent = () => {
           </Form.Item>
           <Form.Item
             name="ownerId"
-            label="Owner ID"
-            rules={[{ required: true, message: "Enter owner user ID" }]}
+            label="Owner"
+            rules={[{ required: true, message: "Select an owner" }]}
           >
-            <Input placeholder="Owner user UUID" />
+            <Select
+              showSearch
+              loading={usersLoading}
+              optionFilterProp="label"
+              placeholder="Select owner (auto-filled from opportunity)"
+              options={users.map((u) => ({ label: u.label, value: u.id }))}
+            />
           </Form.Item>
           <Form.Item
             name="renewalNoticePeriod"
