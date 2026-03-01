@@ -32,6 +32,26 @@ import { useStyles } from "./style/styles";
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
+// Valid next stages from a given stage. Closed Lost (6) is always allowed from any active stage.
+const allowedNextStages = (current: number): number[] => {
+  switch (current) {
+    case 1: return [2, 6];           // Lead → Qualified | Closed Lost
+    case 2: return [3, 6];           // Qualified → Proposal | Closed Lost
+    case 3: return [4, 6];           // Proposal → Negotiation | Closed Lost
+    case 4: return [5, 6];           // Negotiation → Closed Won | Closed Lost
+    default: return [];              // Closed Won / Closed Lost — terminal
+  }
+};
+
+const ALL_STAGES = [
+  { value: 1, label: "Lead" },
+  { value: 2, label: "Qualified" },
+  { value: 3, label: "Proposal" },
+  { value: 4, label: "Negotiation" },
+  { value: 5, label: "Closed Won" },
+  { value: 6, label: "Closed Lost" },
+];
+
 const stageColor = (stage: number) => {
   switch (stage) {
     case 1:
@@ -329,16 +349,16 @@ const OpportunitiesView = () => {
         key: "actions",
         render: (_, record) => (
           <Space wrap size={[6, 6]}>
-            {canChangeStage && (
+            {canChangeStage && allowedNextStages(record.stage).length > 0 && (
               <Button
                 size="small"
                 onClick={() => {
                   setSelectedOpportunity(record);
                   setStageModalOpen(true);
-                  stageForm.setFieldsValue({ newStage: record.stage, notes: undefined, lossReason: undefined });
+                  stageForm.resetFields();
                 }}
               >
-                Stage
+                Advance
               </Button>
             )}
             {canAssign && (
@@ -501,26 +521,30 @@ const OpportunitiesView = () => {
       </Modal>
 
       <Modal
-        title="Update Stage"
+        title="Advance Stage"
         open={stageModalOpen}
         onOk={handleStageUpdate}
-        onCancel={() => setStageModalOpen(false)}
-        okText="Update"
+        onCancel={() => { setStageModalOpen(false); stageForm.resetFields(); }}
+        okText="Advance"
         confirmLoading={isPending}
         width={isMobile ? "calc(100vw - 24px)" : 520}
         style={isMobile ? { top: 12 } : undefined}
       >
+        {selectedOpportunity && (
+          <div style={{ marginBottom: 16 }}>
+            <Text type="secondary">Current stage: </Text>
+            <Tag color={stageColor(selectedOpportunity.stage)}>
+              {selectedOpportunity.stageName ?? ALL_STAGES.find((s) => s.value === selectedOpportunity.stage)?.label ?? `Stage ${selectedOpportunity.stage}`}
+            </Tag>
+          </div>
+        )}
         <Form form={stageForm} layout="vertical">
-          <Form.Item name="newStage" label="Stage" rules={[{ required: true }]}>
+          <Form.Item name="newStage" label="Move to" rules={[{ required: true, message: "Select the next stage" }]}>
             <Select
-              options={[
-                { value: 1, label: "Lead" },
-                { value: 2, label: "Qualified" },
-                { value: 3, label: "Proposal" },
-                { value: 4, label: "Negotiation" },
-                { value: 5, label: "Closed Won" },
-                { value: 6, label: "Closed Lost" },
-              ]}
+              placeholder="Select next stage"
+              options={ALL_STAGES.filter((s) =>
+                allowedNextStages(selectedOpportunity?.stage ?? 0).includes(s.value),
+              )}
             />
           </Form.Item>
           <Form.Item name="notes" label="Notes">

@@ -1,31 +1,30 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   Alert,
   Button,
   Card,
+  Form,
   Input,
   Modal,
   Progress,
+  Select,
   Space,
+  Tag,
   Typography,
   Table,
   Skeleton,
+  message,
 } from "antd";
-import { AudioOutlined, RobotOutlined } from "@ant-design/icons";
+import { WarningOutlined } from "@ant-design/icons";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 import { useStyles } from "./style/styles";
 
 const { Text } = Typography;
 
 const formatPercent = (value: number) => `${Math.round(value)}%`;
-const clientTypeLabel: Record<number, string> = {
-  1: "Government",
-  2: "Private",
-  3: "Partner",
-};
 
 type StageMetrics = {
   stage: number;
@@ -77,79 +76,20 @@ type Overview = {
 type SalesPerformance = {
   userId: string;
   userName: string;
-  opportunitiesWon: number;
+  wonCount: number;
   totalRevenue: number;
   winRate: number;
-  activePipelineValue: number;
 };
 
-interface AssistantResult {
-  reply: string;
-  navigateTo: string | null;
-}
-
-interface ClientDraftFields {
-  name?: string;
-  clientType?: number;
-  industry?: string;
-  companySize?: string;
-  website?: string;
-  billingAddress?: string;
-  taxNumber?: string;
-}
-
-interface ClientDraftResponse {
-  fields?: ClientDraftFields;
-  notes?: string[];
-  message?: string;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-}
-
-interface SpeechRecognitionResult {
-  isFinal: boolean;
-  length: number;
-  item: (index: number) => SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
-}
-
-interface SpeechRecognitionResultList {
-  length: number;
-  item: (index: number) => SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionEvent {
-  resultIndex: number;
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionErrorEvent {
-  error?: string;
-}
-
-interface SpeechRecognitionInstance {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-}
-
-interface SpeechRecognitionCtor {
-  new (): SpeechRecognitionInstance;
-}
-
-interface SpeechWindow extends Window {
-  webkitSpeechRecognition?: SpeechRecognitionCtor;
-  SpeechRecognition?: SpeechRecognitionCtor;
-}
+type ExpiringContract = {
+  id: string;
+  title: string | null;
+  clientName: string | null;
+  contractValue: number;
+  currency: string | null;
+  endDate: string;
+  daysUntilExpiry: number;
+};
 
 const DashboardView = () => {
   const { styles } = useStyles();
@@ -158,21 +98,12 @@ const DashboardView = () => {
   const [topPerformers, setTopPerformers] = useState<SalesPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
-  const [assistantPrompt, setAssistantPrompt] = useState("");
-  const [assistantLoading, setAssistantLoading] = useState(false);
-  const [assistantError, setAssistantError] = useState<string | undefined>(undefined);
-  const [assistantResult, setAssistantResult] = useState<AssistantResult | null>(null);
-  const [assistantModalOpen, setAssistantModalOpen] = useState(false);
-  const [clientCreateError, setClientCreateError] = useState<string | undefined>(undefined);
-  const [clientCreateSuccess, setClientCreateSuccess] = useState<string | undefined>(undefined);
-  const [clientDraftPreview, setClientDraftPreview] = useState<ClientDraftFields | null>(null);
-  const [clientDraftNotes, setClientDraftNotes] = useState<string[]>([]);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [speechListening, setSpeechListening] = useState(false);
-  const [speechError, setSpeechError] = useState<string | undefined>(undefined);
-  const speechRecognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-  const speechPromptBaseRef = useRef("");
-  const speechFinalRef = useRef("");
+  const [expiringContracts, setExpiringContracts] = useState<ExpiringContract[]>([]);
+  const [renewTarget, setRenewTarget] = useState<ExpiringContract | null>(null);
+  const [renewLoading, setRenewLoading] = useState(false);
+  const [renewOpportunities, setRenewOpportunities] = useState<Array<{ id: string; title: string | null }>>([]);
+  const [renewForm] = Form.useForm<{ notes?: string; renewalOpportunityId?: string }>();
+  const [messageApi, contextHolder] = message.useMessage();
 
   const instance = useMemo(() => getAxiosInstace(), []);
 
@@ -180,14 +111,21 @@ const DashboardView = () => {
     setLoading(true);
     setError(undefined);
     try {
-      const [overviewRes, pipelineRes, performanceRes] = await Promise.all([
+      const [overviewRes, pipelineRes, performanceRes, expiringRes] = await Promise.all([
         instance.get("/api/Dashboard/overview"),
         instance.get("/api/Opportunities/pipeline"),
         instance.get("/api/Dashboard/sales-performance?topCount=5"),
+        instance.get("/api/Contracts/expiring?daysUntilExpiry=30"),
       ]);
       setOverview(overviewRes.data);
       setPipelineMetrics(pipelineRes.data);
-      setTopPerformers(Array.isArray(performanceRes.data) ? performanceRes.data : []);
+      setTopPerformers(performanceRes.data?.topPerformers ?? []);
+      const expiring = Array.isArray(expiringRes.data?.items)
+        ? expiringRes.data.items
+        : Array.isArray(expiringRes.data)
+          ? expiringRes.data
+          : [];
+      setExpiringContracts(expiring as ExpiringContract[]);
     } catch (err: unknown) {
       const message = axios.isAxiosError(err)
         ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message
@@ -205,324 +143,64 @@ const DashboardView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const openRenewModal = async (contract: ExpiringContract) => {
+    setRenewTarget(contract);
+    renewForm.resetFields();
+    // Load opportunities for the optional link field
+    try {
+      const { data } = await instance.get(`/api/Opportunities?clientId=${contract.id}&pageSize=100`);
+      const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+      setRenewOpportunities(items as Array<{ id: string; title: string | null }>);
+    } catch {
+      setRenewOpportunities([]);
+    }
+  };
+
+  const handleRenew = async () => {
+    if (!renewTarget) return;
+    setRenewLoading(true);
+    try {
+      const values = renewForm.getFieldsValue();
+      // Step 1: create the renewal record
+      const { data: renewal } = await instance.post(`/api/contracts/${renewTarget.id}/renewals`, {
+        renewalOpportunityId: values.renewalOpportunityId || undefined,
+        notes: values.notes?.trim() || undefined,
+      });
+      // Step 2: complete the renewal
+      await instance.put(`/api/contracts/renewals/${renewal.id}/complete`);
+      messageApi.success(`Contract "${renewTarget.title ?? renewTarget.id}" renewed successfully.`);
+      setRenewTarget(null);
+      renewForm.resetFields();
+      // Refresh the expiring list
+      const res = await instance.get("/api/Contracts/expiring?daysUntilExpiry=30");
+      const updated = Array.isArray(res.data?.items)
+        ? res.data.items
+        : Array.isArray(res.data)
+          ? res.data
+          : [];
+      setExpiringContracts(updated as ExpiringContract[]);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        messageApi.error(err.response?.data?.detail ?? err.response?.data?.title ?? "Renewal failed.");
+      }
+    } finally {
+      setRenewLoading(false);
+    }
+  };
+
   const pipelineStageList: StageMetrics[] = useMemo(() => {
     if (!pipelineMetrics) return [];
     return Object.values(pipelineMetrics.stageMetrics || {});
   }, [pipelineMetrics]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      setSpeechSupported(false);
-      return;
-    }
-    const speechWindow = window as SpeechWindow;
-    setSpeechSupported(Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition));
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (speechRecognitionRef.current) {
-        speechRecognitionRef.current.abort();
-        speechRecognitionRef.current = null;
-      }
-    };
-  }, []);
-
-  const joinPromptSegments = (...parts: string[]): string => {
-    return parts
-      .map((part) => part.trim())
-      .filter((part) => part.length > 0)
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-  };
-
-  const stopSpeechToText = () => {
-    if (speechRecognitionRef.current) {
-      speechRecognitionRef.current.stop();
-    }
-    setSpeechListening(false);
-  };
-
-  const startSpeechToText = () => {
-    if (!speechSupported || typeof window === "undefined") {
-      setSpeechError("Speech-to-text is not supported in this browser.");
-      return;
-    }
-
-    const speechWindow = window as SpeechWindow;
-    const SpeechRecognitionCtor =
-      speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
-
-    if (!SpeechRecognitionCtor) {
-      setSpeechError("Speech-to-text is not supported in this browser.");
-      return;
-    }
-
-    if (!speechRecognitionRef.current) {
-      const recognition = new SpeechRecognitionCtor();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-ZA";
-
-      recognition.onresult = (event) => {
-        let interimTranscript = "";
-
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-          const result = event.results[i];
-          if (!result || result.length === 0) continue;
-          const transcript = result[0]?.transcript ?? result.item(0)?.transcript ?? "";
-          if (!transcript) continue;
-
-          if (result.isFinal) {
-            speechFinalRef.current = `${speechFinalRef.current} ${transcript}`.trim();
-          } else {
-            interimTranscript += ` ${transcript}`;
-          }
-        }
-
-        setAssistantPrompt(
-          joinPromptSegments(speechPromptBaseRef.current, speechFinalRef.current, interimTranscript),
-        );
-      };
-
-      recognition.onerror = (event) => {
-        const errorCode = event.error ?? "unknown";
-        const readable =
-          errorCode === "not-allowed"
-            ? "Microphone permission denied. Please allow microphone access."
-            : errorCode === "no-speech"
-              ? "No speech detected. Try speaking again."
-              : errorCode === "audio-capture"
-                ? "No microphone was detected on this device."
-                : `Speech recognition error: ${errorCode}`;
-        setSpeechError(readable);
-        setSpeechListening(false);
-      };
-
-      recognition.onend = () => {
-        setSpeechListening(false);
-      };
-
-      speechRecognitionRef.current = recognition;
-    }
-
-    speechPromptBaseRef.current = assistantPrompt.trim();
-    speechFinalRef.current = "";
-    setSpeechError(undefined);
-    setSpeechListening(true);
-    speechRecognitionRef.current.start();
-  };
-
-  const toggleSpeechToText = () => {
-    if (speechListening) {
-      stopSpeechToText();
-      return;
-    }
-    startSpeechToText();
-  };
-
-  const closeAssistantModal = () => {
-    stopSpeechToText();
-    setAssistantModalOpen(false);
-  };
-
-  const isClientCreationPrompt = (prompt: string): boolean => {
-    const normalized = prompt.toLowerCase();
-    return (
-      /(add|create|new|register)\s+(a\s+)?client/.test(normalized) ||
-      (normalized.includes("client") &&
-        (normalized.includes("add") || normalized.includes("create") || normalized.includes("register")))
-    );
-  };
-
-  const askAssistant = async () => {
-    if (speechListening) {
-      stopSpeechToText();
-    }
-    const prompt = assistantPrompt.trim();
-    if (!prompt) {
-      setAssistantError("Please enter a question for the assistant.");
-      return;
-    }
-
-    const token =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem("auth_token")
-        : null;
-
-    if (!token) {
-      setAssistantError("You are not authenticated. Please login again.");
-      return;
-    }
-
-    setAssistantLoading(true);
-    setAssistantError(undefined);
-    setClientCreateError(undefined);
-    setClientCreateSuccess(undefined);
-    try {
-      if (isClientCreationPrompt(prompt)) {
-        await createClientFromPrompt(prompt);
-        return;
-      }
-
-      const response = await fetch("/api/assistant/query", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ prompt }),
-      });
-
-      const data = (await response.json()) as Partial<AssistantResult>;
-      if (!response.ok) {
-        throw new Error(
-          typeof data.reply === "string" && data.reply.trim()
-            ? data.reply
-            : "Failed to get assistant response.",
-        );
-      }
-
-      setAssistantResult({
-        reply:
-          typeof data.reply === "string" && data.reply.trim()
-            ? data.reply
-            : "No response received.",
-        navigateTo: typeof data.navigateTo === "string" ? data.navigateTo : null,
-      });
-    } catch (err: unknown) {
-      setAssistantError(
-        err instanceof Error
-          ? err.message
-          : "Failed to get assistant response.",
-      );
-    } finally {
-      setAssistantLoading(false);
-    }
-  };
-
-  const createClientFromPrompt = async (promptOverride?: string) => {
-    const prompt = (promptOverride ?? assistantPrompt).trim();
-    if (!prompt) {
-      setClientCreateError("Please describe the client you want to create.");
-      return;
-    }
-
-    const token =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem("auth_token")
-        : null;
-
-    if (!token) {
-      setClientCreateError("You are not authenticated. Please login again.");
-      return;
-    }
-
-    try {
-      const draftResponse = await fetch("/api/assistant/client-draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ prompt }),
-      });
-
-      const draftData = (await draftResponse.json()) as ClientDraftResponse;
-      if (!draftResponse.ok) {
-        throw new Error(
-          typeof draftData.message === "string" && draftData.message.trim()
-            ? draftData.message
-            : "Failed to generate client details from prompt.",
-        );
-      }
-
-      const fields = draftData.fields ?? {};
-      const name = typeof fields.name === "string" ? fields.name.trim() : "";
-      const clientType = Number(fields.clientType);
-
-      if (!name || ![1, 2, 3].includes(clientType)) {
-        throw new Error(
-          "Prompt must include at least a client name and type (Government, Private, or Partner).",
-        );
-      }
-
-      const website =
-        typeof fields.website === "string" && fields.website.trim()
-          ? fields.website.trim().startsWith("http://") ||
-            fields.website.trim().startsWith("https://")
-            ? fields.website.trim()
-            : `https://${fields.website.trim()}`
-          : undefined;
-
-      await instance.post("/api/Clients", {
-        name,
-        clientType,
-        industry:
-          typeof fields.industry === "string" && fields.industry.trim()
-            ? fields.industry.trim()
-            : undefined,
-        companySize:
-          typeof fields.companySize === "string" && fields.companySize.trim()
-            ? fields.companySize.trim()
-            : undefined,
-        website,
-        billingAddress:
-          typeof fields.billingAddress === "string" && fields.billingAddress.trim()
-            ? fields.billingAddress.trim()
-            : undefined,
-        taxNumber:
-          typeof fields.taxNumber === "string" && fields.taxNumber.trim()
-            ? fields.taxNumber.trim()
-            : undefined,
-      });
-
-      setClientDraftPreview({
-        ...fields,
-        name,
-        clientType,
-        website,
-      });
-      setClientDraftNotes(
-        Array.isArray(draftData.notes)
-          ? draftData.notes.filter((note) => typeof note === "string")
-          : [],
-      );
-      setClientCreateSuccess(`Client "${name}" was created successfully.`);
-      void fetchData();
-    } catch (err: unknown) {
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message
-        : err instanceof Error
-          ? err.message
-          : "Failed to create client with AI.";
-      setClientCreateError(message);
-    }
-  };
-
   return (
     <div className={styles.page}>
+      {contextHolder}
       <section className={styles.headerRow}>
         <div className={styles.headerText}>
           <Text type="secondary">Welcome back</Text>
           <Text className={styles.headerCurrent}>Pipeline and performance overview</Text>
         </div>
-        <Space>
-          <Button
-            className={styles.assistantLaunchButton}
-            icon={<RobotOutlined />}
-            onClick={() => {
-              setAssistantModalOpen(true);
-              setAssistantError(undefined);
-              setClientCreateError(undefined);
-              setClientCreateSuccess(undefined);
-              setSpeechError(undefined);
-            }}
-          >
-            Ask AI
-          </Button>
-        </Space>
       </section>
 
       {error ? (
@@ -540,7 +218,7 @@ const DashboardView = () => {
                 <Text className={styles.metricValue}>
                   {pipelineMetrics?.activeOpportunities ?? "—"}
                 </Text>
-             
+
               </Space>
             </Card>
             <Card className={styles.metricCard}>
@@ -549,7 +227,7 @@ const DashboardView = () => {
                 <Text className={styles.metricValue}>
                   {pipelineMetrics?.winRate != null ? formatPercent(pipelineMetrics.winRate) : "—"}
                 </Text>
-             
+
               </Space>
             </Card>
             <Card className={styles.metricCard}>
@@ -615,7 +293,7 @@ const DashboardView = () => {
                   { title: "User", dataIndex: "userName", key: "userName" },
                   {
                     title: "Won",
-                    dataIndex: "opportunitiesWon",
+                    dataIndex: "wonCount",
                     key: "won",
                   },
                   {
@@ -635,98 +313,107 @@ const DashboardView = () => {
             </Card>
           </section>
 
-          <Modal
-            title="AI Organisation Assistant"
-            open={assistantModalOpen}
-            onCancel={closeAssistantModal}
-            footer={null}
-            destroyOnHidden={false}
-            className={styles.assistantModal}
-          >
-            <Space direction="vertical" size={10} style={{ width: "100%" }}>
-              <div className={styles.assistantHero}>
-                <Text className={styles.assistantBadge}>Neural Assistant</Text>
-                <Text className={styles.assistantHeroText}>
-                  Use one prompt to analyze your pipeline, create clients, and navigate instantly.
-                </Text>
-              </div>
-              <Text className={styles.assistantHint}>
-                Ask about your organisation, users, opportunities, proposals, contracts, and next steps.
-              </Text>
-              <Input.TextArea
-                className={styles.assistantPromptInput}
-                value={assistantPrompt}
-                onChange={(event) => setAssistantPrompt(event.target.value)}
-                autoSize={{ minRows: 4, maxRows: 8 }}
-                placeholder="Example: Who is in my organisation and what roles do they have?"
+          {expiringContracts.length > 0 && (
+            <Card
+              className={styles.panelCard}
+              title={
+                <Space>
+                  <WarningOutlined style={{ color: "#fa8c16" }} />
+                  <span>Contracts expiring within 30 days ({expiringContracts.length})</span>
+                </Space>
+              }
+            >
+              <Table
+                size="small"
+                rowKey="id"
+                pagination={false}
+                dataSource={expiringContracts}
+                columns={[
+                  {
+                    title: "Contract",
+                    dataIndex: "title",
+                    key: "title",
+                    render: (v: string | null) => v ?? "Untitled",
+                  },
+                  {
+                    title: "Client",
+                    dataIndex: "clientName",
+                    key: "clientName",
+                    render: (v: string | null) => v ?? "—",
+                  },
+                  {
+                    title: "Expires",
+                    dataIndex: "endDate",
+                    key: "endDate",
+                    render: (v: string) =>
+                      new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(v)),
+                  },
+                  {
+                    title: "Days left",
+                    dataIndex: "daysUntilExpiry",
+                    key: "daysUntilExpiry",
+                    render: (v: number) => (
+                      <Tag color={v <= 7 ? "red" : v <= 14 ? "orange" : "gold"}>{v}d</Tag>
+                    ),
+                  },
+                  {
+                    title: "",
+                    key: "action",
+                    render: (_, record) => (
+                      <Button
+                        size="small"
+                        type="primary"
+                        onClick={() => void openRenewModal(record)}
+                      >
+                        Renew
+                      </Button>
+                    ),
+                  },
+                ]}
               />
-              <Space className={styles.assistantActions} wrap>
-                <Button
-                  type="primary"
-                  className={styles.assistantPrimaryButton}
-                  icon={<RobotOutlined />}
-                  loading={assistantLoading}
-                  onClick={() => void askAssistant()}
-                >
-                  Ask AI
-                </Button>
-                <Button
-                  icon={<AudioOutlined />}
-                  className={speechListening ? styles.speechButtonActive : styles.speechButton}
-                  onClick={toggleSpeechToText}
-                  disabled={!speechSupported}
-                >
-                  {speechListening ? "Stop Voice Input" : "Start Voice Input"}
-                </Button>
-              </Space>
-              <Text className={styles.speechHint}>
-                {speechSupported
-                  ? speechListening
-                    ? "Listening... speak now."
-                    : "Use voice or text. Say add/create client and click Ask AI."
-                  : "Speech-to-text is not supported in this browser."}
-              </Text>
-              {assistantError ? <Alert type="error" showIcon message={assistantError} /> : null}
-              {speechError ? <Alert type="error" showIcon message={speechError} /> : null}
-              {clientCreateError ? <Alert type="error" showIcon message={clientCreateError} /> : null}
-              {clientCreateSuccess ? (
-                <Alert type="success" showIcon message={clientCreateSuccess} />
-              ) : null}
-              {assistantResult?.reply ? (
-                <div className={styles.assistantAnswer}>
-                  <Text className={styles.assistantAnswerText}>{assistantResult.reply}</Text>
-                </div>
-              ) : null}
-              {clientDraftPreview ? (
-                <div className={styles.assistantClientPreview}>
-                  <Text className={styles.assistantClientPreviewTitle}>Client Created From Prompt</Text>
-                  <Text className={styles.assistantClientPreviewText}>
-                    Name: {clientDraftPreview.name || "—"}
-                  </Text>
-                  <Text className={styles.assistantClientPreviewText}>
-                    Type: {clientTypeLabel[Number(clientDraftPreview.clientType)] || "—"}
-                  </Text>
-                  {clientDraftPreview.industry ? (
-                    <Text className={styles.assistantClientPreviewText}>
-                      Industry: {clientDraftPreview.industry}
-                    </Text>
-                  ) : null}
-                  {clientDraftPreview.website ? (
-                    <Text className={styles.assistantClientPreviewText}>
-                      Website: {clientDraftPreview.website}
-                    </Text>
-                  ) : null}
-                  {clientDraftNotes.length > 0 ? (
-                    <Text className={styles.assistantClientPreviewText}>
-                      Notes: {clientDraftNotes.join(" | ")}
-                    </Text>
-                  ) : null}
-                </div>
-              ) : null}
-            </Space>
-          </Modal>
+            </Card>
+          )}
         </>
       )}
+
+      <Modal
+        title={`Renew — ${renewTarget?.title ?? ""}`}
+        open={Boolean(renewTarget)}
+        onOk={() => void handleRenew()}
+        onCancel={() => { setRenewTarget(null); renewForm.resetFields(); }}
+        okText="Confirm Renewal"
+        confirmLoading={renewLoading}
+        width={480}
+      >
+        {renewTarget && (
+          <div style={{ marginBottom: 16 }}>
+            <Tag color="orange">
+              Expires {new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(renewTarget.endDate))}
+            </Tag>
+            <Tag color={renewTarget.daysUntilExpiry <= 7 ? "red" : renewTarget.daysUntilExpiry <= 14 ? "orange" : "gold"}>
+              {renewTarget.daysUntilExpiry}d remaining
+            </Tag>
+          </div>
+        )}
+        <Form form={renewForm} layout="vertical">
+          <Form.Item name="renewalOpportunityId" label="Linked opportunity (optional)">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Link to a renewal opportunity"
+              options={renewOpportunities.map((o) => ({ label: o.title ?? o.id, value: o.id }))}
+              notFoundContent="No opportunities found for this client"
+            />
+          </Form.Item>
+          <Form.Item name="notes" label="Notes (optional)">
+            <Input.TextArea
+              rows={3}
+              placeholder="e.g. Annual CPI adjustment of 8%"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

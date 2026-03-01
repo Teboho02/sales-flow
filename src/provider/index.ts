@@ -6,3 +6,4 @@ export * from "./contract";
 export * from "./report";
 export * from "./contact";
 export * from "./activity";
+export * from "./pricingRequest";

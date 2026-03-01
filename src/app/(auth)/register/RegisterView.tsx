@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Typography } from "antd";
 import { useEffect } from "react";
 import {
@@ -17,11 +17,16 @@ const { Title, Text } = Typography;
 const RegisterView = () => {
   const { styles } = useStyles();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register } = useAuthenticationActions();
   const { isPending, isError, errorMessage, user } = useAuthenticationState();
   const hasToken =
     typeof window !== "undefined" &&
     Boolean(window.localStorage.getItem("auth_token"));
+
+  const invitedTenantId = searchParams.get("tenantId") ?? undefined;
+  const invitedEmail = searchParams.get("email") ?? undefined;
+  const invitedRole = (searchParams.get("role") ?? undefined) as RegisterFormValues["role"];
 
   useEffect(() => {
     if (user?.userId && hasToken) {
@@ -47,15 +52,11 @@ const RegisterView = () => {
         ...basePayload,
         tenantName: rest.tenantName,
       });
-    } else if (accountType === "joinTenant") {
+    } else {
+      // joinTenant — tenantId comes from the form (pre-filled from invite URL)
       success = await register({
         ...basePayload,
         tenantId: rest.tenantId,
-        role: rest.role,
-      });
-    } else {
-      success = await register({
-        ...basePayload,
         role: rest.role,
       });
     }
@@ -88,10 +89,12 @@ const RegisterView = () => {
           <div className={styles.header}>
             <Text className={styles.appName}>Sales Flow</Text>
             <Title level={3} className={styles.title}>
-              Create your account
+              {invitedTenantId ? "Accept your invitation" : "Create your account"}
             </Title>
             <Text className={styles.subtitle}>
-              Choose to create a new org (Admin), join with a Tenant ID, or try the shared demo.
+              {invitedTenantId
+                ? "You've been invited to join an organisation. Fill in your details to get started."
+                : "Choose to create a new org (Admin) or join an existing one via invitation."}
             </Text>
           </div>
 
@@ -100,6 +103,9 @@ const RegisterView = () => {
             isLoading={isPending}
             hasError={isError}
             errorMessage={errorMessage}
+            invitedTenantId={invitedTenantId}
+            invitedEmail={invitedEmail}
+            invitedRole={invitedRole}
           />
 
           <Text className={styles.subtitle} style={{ marginTop: 12, display: "block" }}>

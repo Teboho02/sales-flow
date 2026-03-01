@@ -13,7 +13,7 @@ export interface RegisterFormValues {
   phoneNumber: string;
   password: string;
   confirmPassword: string;
-  accountType: "newTenant" | "joinTenant" | "defaultTenant";
+  accountType: "newTenant" | "joinTenant";
   tenantName?: string;
   tenantId?: string;
   role?: "SalesRep" | "SalesManager" | "BusinessDevelopmentManager";
@@ -24,6 +24,9 @@ export interface RegisterFormProps {
   isLoading?: boolean;
   hasError?: boolean;
   errorMessage?: string;
+  invitedTenantId?: string;
+  invitedEmail?: string;
+  invitedRole?: RegisterFormValues["role"];
 }
 
 const RegisterForm = ({
@@ -31,15 +34,17 @@ const RegisterForm = ({
   isLoading = false,
   hasError = false,
   errorMessage,
+  invitedTenantId,
+  invitedEmail,
+  invitedRole,
 }: RegisterFormProps) => {
   const { styles } = useStyles();
+  const isInvited = Boolean(invitedTenantId);
   const [form] = Form.useForm<RegisterFormValues>();
   const accountType = Form.useWatch("accountType", form);
 
   const handleFinish: FormProps<RegisterFormValues>["onFinish"] = async (values) => {
-    if (!onSubmit) {
-      return;
-    }
+    if (!onSubmit) return;
     await onSubmit(values);
   };
 
@@ -51,31 +56,31 @@ const RegisterForm = ({
       className={styles.form}
       onFinish={handleFinish}
       initialValues={{
-        accountType: "newTenant",
-        role: "SalesRep",
+        accountType: isInvited ? "joinTenant" : "newTenant",
+        role: invitedRole ?? "SalesRep",
+        email: invitedEmail ?? "",
+        tenantId: invitedTenantId ?? "",
       }}
     >
-      <Form.Item<RegisterFormValues>
-        label="Account Type"
-        name="accountType"
-        rules={[{ required: true, message: "Choose how you want to sign up." }]}
-      >
-        <Radio.Group buttonStyle="solid" className={styles.segmented}>
-          <Radio.Button value="newTenant">Create organisation (Admin)</Radio.Button>
-          <Radio.Button value="joinTenant">Join existing tenant</Radio.Button>
-        </Radio.Group>
-      </Form.Item>
-
-
-
-      {accountType === "defaultTenant" ? (
+      {isInvited ? (
         <Alert
           type="info"
           showIcon
-          message="You will join the shared tenant. Select your role below."
-          style={{ marginBottom: 12 }}
+          message="You've been invited to join an organisation. Your tenant and role have been pre-assigned."
+          style={{ marginBottom: 16 }}
         />
-      ) : null}
+      ) : (
+        <Form.Item<RegisterFormValues>
+          label="Account Type"
+          name="accountType"
+          rules={[{ required: true, message: "Choose how you want to sign up." }]}
+        >
+          <Radio.Group buttonStyle="solid" className={styles.segmented}>
+            <Radio.Button value="newTenant">Create organisation (Admin)</Radio.Button>
+            <Radio.Button value="joinTenant">Join existing organisation</Radio.Button>
+          </Radio.Group>
+        </Form.Item>
+      )}
 
       <Row gutter={12}>
         <Col span={12}>
@@ -106,7 +111,12 @@ const RegisterForm = ({
           { type: "email", message: "Enter a valid email address." },
         ]}
       >
-        <Input size="large" autoComplete="email" placeholder="you@company.com" />
+        <Input
+          size="large"
+          autoComplete="email"
+          placeholder="you@company.com"
+          disabled={isInvited}
+        />
       </Form.Item>
 
       <Form.Item<RegisterFormValues>
@@ -117,7 +127,7 @@ const RegisterForm = ({
         <Input size="large" autoComplete="tel" placeholder="+27 82 000 0000" />
       </Form.Item>
 
-      {accountType === "newTenant" ? (
+      {!isInvited && accountType === "newTenant" ? (
         <Form.Item<RegisterFormValues>
           label="Organisation / Tenant Name"
           name="tenantName"
@@ -127,44 +137,31 @@ const RegisterForm = ({
         </Form.Item>
       ) : null}
 
-      {accountType === "joinTenant" ? (
-        <>
-          <Form.Item<RegisterFormValues>
-            label="Tenant ID"
-            name="tenantId"
-            rules={[
-              { required: true, message: "Enter the tenant ID provided by your Admin." },
-              {
-                pattern:
-                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
-                message: "Enter a valid UUID (tenant ID).",
-              },
-            ]}
-          >
-            <Input size="large" placeholder="63d7bdc1-d2c4-488c-98c7-15c8d0657d58" />
-          </Form.Item>
-
-          <Form.Item<RegisterFormValues>
-            label="Role"
-            name="role"
-            rules={[{ required: true, message: "Select your role." }]}
-          >
-            <Select
-              size="large"
-              options={[
-                { value: "SalesRep", label: "Sales Rep" },
-                { value: "SalesManager", label: "Sales Manager" },
-                {
-                  value: "BusinessDevelopmentManager",
-                  label: "Business Development Manager",
-                },
-              ]}
-            />
-          </Form.Item>
-        </>
+      {/* Hidden tenantId field — always submitted when joining via invite or manual join */}
+      {isInvited ? (
+        <Form.Item name="tenantId" hidden>
+          <Input />
+        </Form.Item>
       ) : null}
 
-      {accountType === "defaultTenant" ? (
+      {!isInvited && accountType === "joinTenant" ? (
+        <Form.Item<RegisterFormValues>
+          label="Tenant ID"
+          name="tenantId"
+          rules={[
+            { required: true, message: "Enter the tenant ID provided by your Admin." },
+            {
+              pattern:
+                /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+              message: "Enter a valid UUID (tenant ID).",
+            },
+          ]}
+        >
+          <Input size="large" placeholder="63d7bdc1-d2c4-488c-98c7-15c8d0657d58" />
+        </Form.Item>
+      ) : null}
+
+      {isInvited || accountType === "joinTenant" ? (
         <Form.Item<RegisterFormValues>
           label="Role"
           name="role"
@@ -172,9 +169,11 @@ const RegisterForm = ({
         >
           <Select
             size="large"
+            disabled={isInvited}
             options={[
               { value: "SalesRep", label: "Sales Rep" },
               { value: "SalesManager", label: "Sales Manager" },
+              { value: "BusinessDevelopmentManager", label: "Business Development Manager" },
             ]}
           />
         </Form.Item>
@@ -218,7 +217,7 @@ const RegisterForm = ({
         loading={isLoading}
         className={styles.submitButton}
       >
-        Create account
+        {isInvited ? "Join organisation" : "Create account"}
       </Button>
       {hasError ? (
         <Alert
@@ -230,11 +229,10 @@ const RegisterForm = ({
       ) : null}
 
       <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: "block" }}>
-        We’ll never share your credentials. By creating an account you agree to the terms.
+        We'll never share your credentials. By creating an account you agree to the terms.
       </Text>
     </Form>
   );
 };
 
 export default RegisterForm;
-

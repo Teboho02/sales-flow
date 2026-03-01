@@ -100,8 +100,14 @@ const ContractsContent = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [clients, setClients] = useState<Array<{ id: string; name: string | null }>>([]);
   const [opportunities, setOpportunities] = useState<
-    Array<{ id: string; title: string | null; clientName: string | null }>
+    Array<{ id: string; title: string | null; clientName: string | null; ownerId: string | null; ownerName: string | null }>
   >([]);
+  const [users, setUsers] = useState<Array<{ id: string; label: string }>>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [proposals, setProposals] = useState<
+    Array<{ id: string; label: string }>
+  >([]);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
   const [selectedContract, setSelectedContract] = useState<IContract | null>(null);
@@ -155,11 +161,13 @@ const ContractsContent = () => {
           ? oppRes.data
           : [];
       setOpportunities(
-        (oppItemsRaw as Array<{ id: string; title?: string | null; clientName?: string | null }>).map(
+        (oppItemsRaw as Array<{ id: string; title?: string | null; clientName?: string | null; ownerId?: string | null; ownerName?: string | null }>).map(
           (o) => ({
             id: o.id,
             title: o.title ?? null,
             clientName: o.clientName ?? null,
+            ownerId: o.ownerId ?? null,
+            ownerName: o.ownerName ?? null,
           }),
         ),
       );
@@ -178,11 +186,13 @@ const ContractsContent = () => {
       const { data } = await instance.get(`/api/Opportunities?pageNumber=1&pageSize=100${qs}`);
       const oppItems = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
       setOpportunities(
-        (oppItems as Array<{ id: string; title?: string | null; clientName?: string | null }>).map(
+        (oppItems as Array<{ id: string; title?: string | null; clientName?: string | null; ownerId?: string | null; ownerName?: string | null }>).map(
           (o) => ({
             id: o.id,
             title: o.title ?? null,
             clientName: o.clientName ?? null,
+            ownerId: o.ownerId ?? null,
+            ownerName: o.ownerName ?? null,
           }),
         ),
       );
@@ -190,6 +200,47 @@ const ContractsContent = () => {
       messageApi.error("Failed to load opportunities.");
     } finally {
       setLookupLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const instance = getAxiosInstace();
+      const { data } = await instance.get("/api/users?pageNumber=1&pageSize=200");
+      const raw = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+      setUsers(
+        (raw as Array<{ id: string; firstName?: string | null; lastName?: string | null; email?: string | null }>).map(
+          (u) => ({
+            id: u.id,
+            label: [`${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(), u.email].filter(Boolean).join(" — ") || u.id,
+          }),
+        ),
+      );
+    } catch {
+      setUsers([]);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const fetchProposalsByOpportunity = async (opportunityId?: string) => {
+    if (!opportunityId) { setProposals([]); return; }
+    setProposalsLoading(true);
+    try {
+      const instance = getAxiosInstace();
+      const { data } = await instance.get(`/api/Proposals?opportunityId=${opportunityId}&pageSize=100`);
+      const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+      setProposals(
+        (items as Array<{ id: string; title?: string | null; proposalNumber?: string | null }>).map((p) => ({
+          id: p.id,
+          label: p.title ?? p.proposalNumber ?? p.id,
+        })),
+      );
+    } catch {
+      setProposals([]);
+    } finally {
+      setProposalsLoading(false);
     }
   };
 
@@ -308,6 +359,7 @@ const ContractsContent = () => {
   useEffect(() => {
     void getContracts({ pageNumber: 1, pageSize: 25 });
     void fetchLookups();
+    void fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -461,6 +513,7 @@ const ContractsContent = () => {
                     terms: record.terms ?? "",
                   });
                   void fetchOpportunitiesByClient(record.clientId);
+                  void fetchProposalsByOpportunity(record.opportunityId ?? undefined);
                 }}
               >
                 Edit
@@ -588,26 +641,52 @@ const ContractsContent = () => {
               optionFilterProp="label"
               placeholder="Select client"
               onChange={(val) => {
-                form.setFieldsValue({ opportunityId: undefined });
+                form.setFieldsValue({ opportunityId: undefined, proposalId: undefined });
+                setProposals([]);
                 void fetchOpportunitiesByClient(val);
               }}
               options={clients.map((c) => ({ label: c.name || c.id, value: c.id }))}
             />
           </Form.Item>
-          <Form.Item name="opportunityId" label="Opportunity">
+          <Form.Item
+            name="opportunityId"
+            label="Opportunity"
+            rules={[{ required: true, message: "Select an opportunity" }]}
+          >
             <Select
               showSearch
               loading={lookupLoading}
               optionFilterProp="label"
               placeholder="Select opportunity"
+              onChange={(val) => {
+                form.setFieldsValue({ proposalId: undefined });
+                void fetchProposalsByOpportunity(val);
+                // Auto-fill owner from the selected opportunity
+                const opp = opportunities.find((o) => o.id === val);
+                if (opp?.ownerId) {
+                  form.setFieldsValue({ ownerId: opp.ownerId });
+                }
+              }}
               options={opportunities.map((o) => ({
                 label: o.title || o.id,
                 value: o.id,
               }))}
             />
           </Form.Item>
-          <Form.Item name="proposalId" label="Proposal ID (optional)">
-            <Input placeholder="Proposal UUID" />
+          <Form.Item
+            name="proposalId"
+            label="Proposal"
+            rules={[{ required: true, message: "Select a proposal — a contract requires an approved proposal" }]}
+          >
+            <Select
+              showSearch
+              loading={proposalsLoading}
+              optionFilterProp="label"
+              placeholder={form.getFieldValue("opportunityId") ? "Select proposal" : "Select an opportunity first"}
+              disabled={!form.getFieldValue("opportunityId")}
+              options={proposals.map((p) => ({ label: p.label, value: p.id }))}
+              notFoundContent={proposalsLoading ? "Loading..." : "No proposals found for this opportunity"}
+            />
           </Form.Item>
           <Form.Item
             name="contractValue"
@@ -644,10 +723,16 @@ const ContractsContent = () => {
           </Form.Item>
           <Form.Item
             name="ownerId"
-            label="Owner ID"
-            rules={[{ required: true, message: "Enter owner user ID" }]}
+            label="Owner"
+            rules={[{ required: true, message: "Select an owner" }]}
           >
-            <Input placeholder="Owner user UUID" />
+            <Select
+              showSearch
+              loading={usersLoading}
+              optionFilterProp="label"
+              placeholder="Select owner (auto-filled from opportunity)"
+              options={users.map((u) => ({ label: u.label, value: u.id }))}
+            />
           </Form.Item>
           <Form.Item
             name="renewalNoticePeriod"

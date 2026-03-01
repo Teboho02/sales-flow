@@ -30,6 +30,19 @@ export const ReportReducer = handleActions<IReportStateContext, IReportStateCont
       ...state,
       ...action.payload,
     }),
+
+    [ReportActionEnums.getSalesPerformancePending]: (state, action) => ({
+      ...state,
+      ...action.payload,
+    }),
+    [ReportActionEnums.getSalesPerformanceSuccess]: (state, action) => ({
+      ...state,
+      ...action.payload,
+    }),
+    [ReportActionEnums.getSalesPerformanceError]: (state, action) => ({
+      ...state,
+      ...action.payload,
+    }),
   },
   INITIAL_STATE,
 );

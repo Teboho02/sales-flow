@@ -3,10 +3,13 @@
 import { useEffect, useMemo } from "react";
 import { Alert, Button, Card, DatePicker, Form, Select, Space, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { FilePdfOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useAuthenticationState } from "@/provider";
 import { ReportProvider, useReportActions, useReportState } from "@/provider";
-import type { OpportunitiesReportItem, SalesByPeriodItem } from "@/provider/report/context";
+import type { OpportunitiesReportItem, SalesByPeriodItem, SalesPerformanceItem } from "@/provider/report/context";
 import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
@@ -18,8 +21,8 @@ const defaultRange = [dayjs().subtract(30, "day"), dayjs()];
 
 const ReportsContent = () => {
   const { roles } = useAuthenticationState().user ?? {};
-  const { getOpportunitiesReport, getSalesByPeriod } = useReportActions();
-  const { opportunitiesReport, salesByPeriod, isPending, isError, errorMessage } = useReportState();
+  const { getOpportunitiesReport, getSalesByPeriod, getSalesPerformance } = useReportActions();
+  const { opportunitiesReport, salesByPeriod, salesPerformance, isPending, isError, errorMessage } = useReportState();
   const { styles } = useStyles();
 
   const [form] = Form.useForm();
@@ -35,10 +38,14 @@ const ReportsContent = () => {
     const end = defaultRange[1].toISOString();
     void getOpportunitiesReport({ startDate: start, endDate: end });
     void getSalesByPeriod({ startDate: start, endDate: end, groupBy: "month" });
+    void getSalesPerformance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canView]);
 
   const oppColumns: ColumnsType<OpportunitiesReportItem> = [
+    { title: "Opportunity", dataIndex: "title", key: "title" },
+    { title: "Client", dataIndex: "clientName", key: "clientName" },
+    { title: "Owner", dataIndex: "ownerName", key: "ownerName" },
     {
       title: "Stage",
       dataIndex: "stageName",
@@ -46,28 +53,152 @@ const ReportsContent = () => {
       render: (text, record) => text ?? record.stage,
     },
     {
-      title: "Owner",
-      dataIndex: "ownerName",
-      key: "ownerName",
-      render: (text) => text ?? "All",
+      title: "Estimated Value",
+      dataIndex: "estimatedValue",
+      key: "estimatedValue",
+      render: (val: number) => formatCurrency(val ?? 0),
     },
-    { title: "Count", dataIndex: "count", key: "count" },
     {
-      title: "Total Value",
-      dataIndex: "totalValue",
-      key: "totalValue",
+      title: "Probability",
+      dataIndex: "probability",
+      key: "probability",
+      render: (val: number) => `${val ?? 0}%`,
+    },
+  ];
+
+  const performanceColumns: ColumnsType<SalesPerformanceItem> = [
+    {
+      title: "#",
+      key: "rank",
+      width: 48,
+      render: (_: unknown, __: SalesPerformanceItem, index: number) => index + 1,
+    },
+    { title: "Name", dataIndex: "userName", key: "userName" },
+    { title: "Opportunities", dataIndex: "opportunitiesCount", key: "opportunitiesCount", align: "right" as const },
+    { title: "Won", dataIndex: "wonCount", key: "wonCount", align: "right" as const },
+    { title: "Lost", dataIndex: "lostCount", key: "lostCount", align: "right" as const },
+    {
+      title: "Win Rate",
+      dataIndex: "winRate",
+      key: "winRate",
+      align: "right" as const,
+      render: (val: number) => `${Math.round(val ?? 0)}%`,
+    },
+    {
+      title: "Avg Deal Size",
+      dataIndex: "averageDealSize",
+      key: "averageDealSize",
+      align: "right" as const,
+      render: (val: number) => formatCurrency(val ?? 0),
+    },
+    {
+      title: "Total Revenue",
+      dataIndex: "totalRevenue",
+      key: "totalRevenue",
+      align: "right" as const,
       render: (val: number) => formatCurrency(val ?? 0),
     },
   ];
 
   const salesColumns: ColumnsType<SalesByPeriodItem> = [
-    { title: "Period", dataIndex: "period", key: "period" },
-    { title: "Value", dataIndex: "value", key: "value", render: (val) => formatCurrency(val ?? 0) },
+    { title: "Period", dataIndex: "periodName", key: "periodName" },
+    { title: "Opportunities", dataIndex: "opportunitiesCount", key: "opportunitiesCount" },
+    { title: "Won", dataIndex: "wonCount", key: "wonCount" },
+    { title: "Lost", dataIndex: "lostCount", key: "lostCount" },
+    { title: "Win Rate", dataIndex: "winRate", key: "winRate", render: (val: number) => `${Math.round(val ?? 0)}%` },
+    { title: "Total Value", dataIndex: "totalValue", key: "totalValue", render: (val: number) => formatCurrency(val ?? 0) },
+    { title: "Won Value", dataIndex: "wonValue", key: "wonValue", render: (val: number) => formatCurrency(val ?? 0) },
   ];
 
   if (!canView) {
     return <Alert type="warning" message="Reports are restricted to Admin and SalesManager roles." showIcon />;
   }
+
+  const handleDownloadPdf = () => {
+    const values = form.getFieldsValue();
+    const startLabel = values.range?.[0]?.format("DD MMM YYYY") ?? "";
+    const endLabel = values.range?.[1]?.format("DD MMM YYYY") ?? "";
+    const generatedAt = dayjs().format("DD MMM YYYY HH:mm");
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("SalesFlow CRM — Reports", 14, 18);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(`Period: ${startLabel} – ${endLabel}`, 14, 26);
+    doc.text(`Generated: ${generatedAt}`, 14, 32);
+    doc.setTextColor(0);
+
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Opportunities Report", 14, 44);
+
+    autoTable(doc, {
+      startY: 48,
+      head: [["Opportunity", "Client", "Owner", "Stage", "Estimated Value", "Probability"]],
+      body: (opportunitiesReport ?? []).map((r) => [
+        r.title,
+        r.clientName,
+        r.ownerName,
+        r.stageName ?? r.stage,
+        formatCurrency(r.estimatedValue ?? 0),
+        `${r.probability ?? 0}%`,
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [14, 9, 85] },
+    });
+
+    const afterOpp = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Sales by Period", 14, afterOpp);
+
+    autoTable(doc, {
+      startY: afterOpp + 4,
+      head: [["Period", "Opportunities", "Won", "Lost", "Win Rate", "Total Value", "Won Value"]],
+      body: (salesByPeriod ?? []).map((r) => [
+        r.periodName,
+        r.opportunitiesCount,
+        r.wonCount,
+        r.lostCount,
+        `${Math.round(r.winRate ?? 0)}%`,
+        formatCurrency(r.totalValue ?? 0),
+        formatCurrency(r.wonValue ?? 0),
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [14, 9, 85] },
+    });
+
+    const afterSales = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Sales Performance", 14, afterSales);
+
+    autoTable(doc, {
+      startY: afterSales + 4,
+      head: [["#", "Name", "Opportunities", "Won", "Lost", "Win Rate", "Avg Deal Size", "Total Revenue"]],
+      body: (salesPerformance?.topPerformers ?? []).map((r, i) => [
+        i + 1,
+        r.userName,
+        r.opportunitiesCount,
+        r.wonCount,
+        r.lostCount,
+        `${Math.round(r.winRate ?? 0)}%`,
+        formatCurrency(r.averageDealSize ?? 0),
+        formatCurrency(r.totalRevenue ?? 0),
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [14, 9, 85] },
+    });
+
+    doc.save(`salesflow-reports-${dayjs().format("YYYY-MM-DD")}.pdf`);
+  };
 
   const handleRun = async () => {
     const values = await form.validateFields();
@@ -81,6 +212,7 @@ const ReportsContent = () => {
       ownerId: values.ownerId,
     });
     void getSalesByPeriod({ startDate, endDate, groupBy: values.groupBy });
+    void getSalesPerformance();
   };
 
   return (
@@ -93,6 +225,13 @@ const ReportsContent = () => {
             </Title>
             <Text type="secondary">Opportunities and sales performance (Admin/SalesManager).</Text>
           </div>
+          <Button
+            icon={<FilePdfOutlined />}
+            onClick={handleDownloadPdf}
+            disabled={!opportunitiesReport && !salesByPeriod && !salesPerformance}
+          >
+            Download PDF
+          </Button>
         </div>
 
         <Form
@@ -143,7 +282,7 @@ const ReportsContent = () => {
         <Card title="Opportunities Report">
           <Table
             size="small"
-            rowKey={(r) => `${r.stage}-${r.ownerId ?? "all"}`}
+            rowKey={(r) => r.id}
             columns={oppColumns}
             dataSource={opportunitiesReport ?? []}
             loading={isPending}
@@ -154,9 +293,34 @@ const ReportsContent = () => {
         <Card title="Sales by Period">
           <Table
             size="small"
-            rowKey={(r) => r.period}
+            rowKey={(r) => r.periodName}
             columns={salesColumns}
             dataSource={salesByPeriod ?? []}
+            loading={isPending}
+            pagination={false}
+          />
+        </Card>
+
+        <Card
+          title="Sales Performance"
+          extra={
+            salesPerformance && (
+              <Space size={24}>
+                <Text type="secondary">
+                  Avg deals/user: <Text strong>{salesPerformance.averageDealsPerUser.toFixed(1)}</Text>
+                </Text>
+                <Text type="secondary">
+                  Avg revenue/user: <Text strong>{formatCurrency(salesPerformance.averageRevenuePerUser)}</Text>
+                </Text>
+              </Space>
+            )
+          }
+        >
+          <Table
+            size="small"
+            rowKey={(r) => r.userId}
+            columns={performanceColumns}
+            dataSource={salesPerformance?.topPerformers ?? []}
             loading={isPending}
             pagination={false}
           />
