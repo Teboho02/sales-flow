@@ -2,16 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import dayjs from "dayjs";
-import type { Dayjs } from "dayjs";
 import {
   Alert,
   Button,
   Card,
-  DatePicker,
   Form,
+  Input,
   Modal,
   Progress,
+  Select,
   Space,
   Tag,
   Typography,
@@ -102,7 +101,8 @@ const DashboardView = () => {
   const [expiringContracts, setExpiringContracts] = useState<ExpiringContract[]>([]);
   const [renewTarget, setRenewTarget] = useState<ExpiringContract | null>(null);
   const [renewLoading, setRenewLoading] = useState(false);
-  const [renewForm] = Form.useForm<{ newEndDate: Dayjs }>();
+  const [renewOpportunities, setRenewOpportunities] = useState<Array<{ id: string; title: string | null }>>([]);
+  const [renewForm] = Form.useForm<{ notes?: string; renewalOpportunityId?: string }>();
   const [messageApi, contextHolder] = message.useMessage();
 
   const instance = useMemo(() => getAxiosInstace(), []);
@@ -143,18 +143,35 @@ const DashboardView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const openRenewModal = async (contract: ExpiringContract) => {
+    setRenewTarget(contract);
+    renewForm.resetFields();
+    // Load opportunities for the optional link field
+    try {
+      const { data } = await instance.get(`/api/Opportunities?clientId=${contract.id}&pageSize=100`);
+      const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+      setRenewOpportunities(items as Array<{ id: string; title: string | null }>);
+    } catch {
+      setRenewOpportunities([]);
+    }
+  };
+
   const handleRenew = async () => {
     if (!renewTarget) return;
+    setRenewLoading(true);
     try {
-      const values = await renewForm.validateFields();
-      setRenewLoading(true);
-      await instance.put(`/api/Contracts/${renewTarget.id}/renew`, {
-        newEndDate: values.newEndDate.toISOString(),
+      const values = renewForm.getFieldsValue();
+      // Step 1: create the renewal record
+      const { data: renewal } = await instance.post(`/api/contracts/${renewTarget.id}/renewals`, {
+        renewalOpportunityId: values.renewalOpportunityId || undefined,
+        notes: values.notes?.trim() || undefined,
       });
-      messageApi.success(`Contract "${renewTarget.title ?? renewTarget.id}" renewed.`);
+      // Step 2: complete the renewal
+      await instance.put(`/api/contracts/renewals/${renewal.id}/complete`);
+      messageApi.success(`Contract "${renewTarget.title ?? renewTarget.id}" renewed successfully.`);
       setRenewTarget(null);
       renewForm.resetFields();
-      // Refresh expiring list
+      // Refresh the expiring list
       const res = await instance.get("/api/Contracts/expiring?daysUntilExpiry=30");
       const updated = Array.isArray(res.data?.items)
         ? res.data.items
@@ -346,10 +363,7 @@ const DashboardView = () => {
                       <Button
                         size="small"
                         type="primary"
-                        onClick={() => {
-                          setRenewTarget(record);
-                          renewForm.setFieldValue("newEndDate", dayjs(record.endDate).add(1, "year"));
-                        }}
+                        onClick={() => void openRenewModal(record)}
                       >
                         Renew
                       </Button>
@@ -369,17 +383,33 @@ const DashboardView = () => {
         onCancel={() => { setRenewTarget(null); renewForm.resetFields(); }}
         okText="Confirm Renewal"
         confirmLoading={renewLoading}
-        width={420}
+        width={480}
       >
+        {renewTarget && (
+          <div style={{ marginBottom: 16 }}>
+            <Tag color="orange">
+              Expires {new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(renewTarget.endDate))}
+            </Tag>
+            <Tag color={renewTarget.daysUntilExpiry <= 7 ? "red" : renewTarget.daysUntilExpiry <= 14 ? "orange" : "gold"}>
+              {renewTarget.daysUntilExpiry}d remaining
+            </Tag>
+          </div>
+        )}
         <Form form={renewForm} layout="vertical">
-          <Form.Item
-            name="newEndDate"
-            label="New end date"
-            rules={[{ required: true, message: "Select a new end date" }]}
-          >
-            <DatePicker
-              style={{ width: "100%" }}
-              disabledDate={(d) => d.isBefore(dayjs(), "day")}
+          <Form.Item name="renewalOpportunityId" label="Linked opportunity (optional)">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Link to a renewal opportunity"
+              options={renewOpportunities.map((o) => ({ label: o.title ?? o.id, value: o.id }))}
+              notFoundContent="No opportunities found for this client"
+            />
+          </Form.Item>
+          <Form.Item name="notes" label="Notes (optional)">
+            <Input.TextArea
+              rows={3}
+              placeholder="e.g. Annual CPI adjustment of 8%"
             />
           </Form.Item>
         </Form>
