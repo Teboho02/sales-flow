@@ -112,18 +112,13 @@ const ProfilePage = () => {
           <Descriptions.Item label="Roles">
             {user?.roles && user.roles.length > 0 ? user.roles.join(", ") : "—"}
           </Descriptions.Item>
-          <Descriptions.Item label="Tenant ID">{user?.tenantId ?? "—"}</Descriptions.Item>
-          <Descriptions.Item label="User ID">{user?.userId ?? "—"}</Descriptions.Item>
-          <Descriptions.Item label="Token expires">
-            {user?.expiresAt ?? "—"}
-          </Descriptions.Item>
         </Descriptions>
         <Button danger style={{ marginTop: 16 }} onClick={logout}>
           Logout
         </Button>
       </Card>
 
-      {isAdmin && user?.tenantId ? <InviteForm tenantId={user.tenantId} /> : null}
+      {isAdmin ? <InviteForm tenantId={user?.tenantId ?? ""} /> : null}
     </Space>
   );
 };

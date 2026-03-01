@@ -133,7 +133,14 @@ export const AuthenticationProvider = ({
     try {
       const instance = getAxiosInstace();
       const { data } = await instance.get("/api/Auth/me");
-      const user = mapApiUser(data, token);
+      const apiUser = mapApiUser(data, token);
+      // Preserve fields the /me endpoint may not return (name, tenantId)
+      const user: IAuthenticationUser = {
+        ...apiUser,
+        firstName: apiUser.firstName ?? cachedUser?.firstName,
+        lastName: apiUser.lastName ?? cachedUser?.lastName,
+        tenantId: apiUser.tenantId ?? cachedUser?.tenantId,
+      };
       persistToken(user.token);
       persistUser(user);
       dispatch(getProfileSuccess(user));
