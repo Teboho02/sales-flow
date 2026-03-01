@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "users:bulk-add": "node scripts/bulk-add-users.mjs"
+    "users:bulk-add": "node scripts/bulk-add-users.mjs",
+    "seed": "node scripts/seed-mock-data.mjs",
+    "seed:pricing": "node scripts/seed-pricing-requests.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

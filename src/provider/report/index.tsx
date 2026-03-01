@@ -11,6 +11,9 @@ import {
   getSalesByPeriodError,
   getSalesByPeriodPending,
   getSalesByPeriodSuccess,
+  getSalesPerformanceError,
+  getSalesPerformancePending,
+  getSalesPerformanceSuccess,
 } from "./actions";
 import type {
   IReportStateContext,
@@ -66,12 +69,23 @@ export const ReportProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const getSalesPerformance = async (topCount = 50) => {
+    dispatch(getSalesPerformancePending());
+    try {
+      const { data } = await instance.get(`/api/Dashboard/sales-performance?topCount=${topCount}`);
+      dispatch(getSalesPerformanceSuccess(data));
+    } catch (err) {
+      handleError(err, getSalesPerformanceError);
+    }
+  };
+
   return (
     <ReportStateContext.Provider value={state}>
       <ReportActionContext.Provider
         value={{
           getOpportunitiesReport,
           getSalesByPeriod,
+          getSalesPerformance,
         }}
       >
         {children}

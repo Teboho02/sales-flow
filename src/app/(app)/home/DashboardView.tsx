@@ -68,10 +68,9 @@ type Overview = {
 type SalesPerformance = {
   userId: string;
   userName: string;
-  opportunitiesWon: number;
+  wonCount: number;
   totalRevenue: number;
   winRate: number;
-  activePipelineValue: number;
 };
 
 const DashboardView = () => {
@@ -95,7 +94,7 @@ const DashboardView = () => {
       ]);
       setOverview(overviewRes.data);
       setPipelineMetrics(pipelineRes.data);
-      setTopPerformers(Array.isArray(performanceRes.data) ? performanceRes.data : []);
+      setTopPerformers(performanceRes.data?.topPerformers ?? []);
     } catch (err: unknown) {
       const message = axios.isAxiosError(err)
         ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message
@@ -217,7 +216,7 @@ const DashboardView = () => {
                   { title: "User", dataIndex: "userName", key: "userName" },
                   {
                     title: "Won",
-                    dataIndex: "opportunitiesWon",
+                    dataIndex: "wonCount",
                     key: "won",
                   },
                   {

@@ -9,7 +9,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useAuthenticationState } from "@/provider";
 import { ReportProvider, useReportActions, useReportState } from "@/provider";
-import type { OpportunitiesReportItem, SalesByPeriodItem } from "@/provider/report/context";
+import type { OpportunitiesReportItem, SalesByPeriodItem, SalesPerformanceItem } from "@/provider/report/context";
 import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
@@ -21,8 +21,8 @@ const defaultRange = [dayjs().subtract(30, "day"), dayjs()];
 
 const ReportsContent = () => {
   const { roles } = useAuthenticationState().user ?? {};
-  const { getOpportunitiesReport, getSalesByPeriod } = useReportActions();
-  const { opportunitiesReport, salesByPeriod, isPending, isError, errorMessage } = useReportState();
+  const { getOpportunitiesReport, getSalesByPeriod, getSalesPerformance } = useReportActions();
+  const { opportunitiesReport, salesByPeriod, salesPerformance, isPending, isError, errorMessage } = useReportState();
   const { styles } = useStyles();
 
   const [form] = Form.useForm();
@@ -38,6 +38,7 @@ const ReportsContent = () => {
     const end = defaultRange[1].toISOString();
     void getOpportunitiesReport({ startDate: start, endDate: end });
     void getSalesByPeriod({ startDate: start, endDate: end, groupBy: "month" });
+    void getSalesPerformance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canView]);
 
@@ -62,6 +63,40 @@ const ReportsContent = () => {
       dataIndex: "probability",
       key: "probability",
       render: (val: number) => `${val ?? 0}%`,
+    },
+  ];
+
+  const performanceColumns: ColumnsType<SalesPerformanceItem> = [
+    {
+      title: "#",
+      key: "rank",
+      width: 48,
+      render: (_: unknown, __: SalesPerformanceItem, index: number) => index + 1,
+    },
+    { title: "Name", dataIndex: "userName", key: "userName" },
+    { title: "Opportunities", dataIndex: "opportunitiesCount", key: "opportunitiesCount", align: "right" as const },
+    { title: "Won", dataIndex: "wonCount", key: "wonCount", align: "right" as const },
+    { title: "Lost", dataIndex: "lostCount", key: "lostCount", align: "right" as const },
+    {
+      title: "Win Rate",
+      dataIndex: "winRate",
+      key: "winRate",
+      align: "right" as const,
+      render: (val: number) => `${Math.round(val ?? 0)}%`,
+    },
+    {
+      title: "Avg Deal Size",
+      dataIndex: "averageDealSize",
+      key: "averageDealSize",
+      align: "right" as const,
+      render: (val: number) => formatCurrency(val ?? 0),
+    },
+    {
+      title: "Total Revenue",
+      dataIndex: "totalRevenue",
+      key: "totalRevenue",
+      align: "right" as const,
+      render: (val: number) => formatCurrency(val ?? 0),
     },
   ];
 
@@ -139,6 +174,29 @@ const ReportsContent = () => {
       headStyles: { fillColor: [14, 9, 85] },
     });
 
+    const afterSales = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Sales Performance", 14, afterSales);
+
+    autoTable(doc, {
+      startY: afterSales + 4,
+      head: [["#", "Name", "Opportunities", "Won", "Lost", "Win Rate", "Avg Deal Size", "Total Revenue"]],
+      body: (salesPerformance?.topPerformers ?? []).map((r, i) => [
+        i + 1,
+        r.userName,
+        r.opportunitiesCount,
+        r.wonCount,
+        r.lostCount,
+        `${Math.round(r.winRate ?? 0)}%`,
+        formatCurrency(r.averageDealSize ?? 0),
+        formatCurrency(r.totalRevenue ?? 0),
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [14, 9, 85] },
+    });
+
     doc.save(`salesflow-reports-${dayjs().format("YYYY-MM-DD")}.pdf`);
   };
 
@@ -154,6 +212,7 @@ const ReportsContent = () => {
       ownerId: values.ownerId,
     });
     void getSalesByPeriod({ startDate, endDate, groupBy: values.groupBy });
+    void getSalesPerformance();
   };
 
   return (
@@ -169,7 +228,7 @@ const ReportsContent = () => {
           <Button
             icon={<FilePdfOutlined />}
             onClick={handleDownloadPdf}
-            disabled={!opportunitiesReport && !salesByPeriod}
+            disabled={!opportunitiesReport && !salesByPeriod && !salesPerformance}
           >
             Download PDF
           </Button>
@@ -237,6 +296,31 @@ const ReportsContent = () => {
             rowKey={(r) => r.periodName}
             columns={salesColumns}
             dataSource={salesByPeriod ?? []}
+            loading={isPending}
+            pagination={false}
+          />
+        </Card>
+
+        <Card
+          title="Sales Performance"
+          extra={
+            salesPerformance && (
+              <Space size={24}>
+                <Text type="secondary">
+                  Avg deals/user: <Text strong>{salesPerformance.averageDealsPerUser.toFixed(1)}</Text>
+                </Text>
+                <Text type="secondary">
+                  Avg revenue/user: <Text strong>{formatCurrency(salesPerformance.averageRevenuePerUser)}</Text>
+                </Text>
+              </Space>
+            )
+          }
+        >
+          <Table
+            size="small"
+            rowKey={(r) => r.userId}
+            columns={performanceColumns}
+            dataSource={salesPerformance?.topPerformers ?? []}
             loading={isPending}
             pagination={false}
           />

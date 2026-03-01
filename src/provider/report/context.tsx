@@ -37,6 +37,23 @@ export interface SalesByPeriodQuery {
   groupBy: "month" | "week";
 }
 
+export interface SalesPerformanceItem {
+  userId: string;
+  userName: string;
+  opportunitiesCount: number;
+  wonCount: number;
+  lostCount: number;
+  totalRevenue: number;
+  winRate: number;
+  averageDealSize: number;
+}
+
+export interface SalesPerformanceReport {
+  topPerformers: SalesPerformanceItem[];
+  averageDealsPerUser: number;
+  averageRevenuePerUser: number;
+}
+
 export interface IReportStateContext {
   isPending: boolean;
   isSuccess: boolean;
@@ -44,11 +61,13 @@ export interface IReportStateContext {
   errorMessage?: string;
   opportunitiesReport?: OpportunitiesReportItem[];
   salesByPeriod?: SalesByPeriodItem[];
+  salesPerformance?: SalesPerformanceReport;
 }
 
 export interface IReportActionContext {
   getOpportunitiesReport: (filters: OpportunitiesReportQuery) => Promise<void>;
   getSalesByPeriod: (filters: SalesByPeriodQuery) => Promise<void>;
+  getSalesPerformance: (topCount?: number) => Promise<void>;
 }
 
 export const INITIAL_STATE: IReportStateContext = {
@@ -60,6 +79,7 @@ export const INITIAL_STATE: IReportStateContext = {
 export const INITIAL_ACTION_STATE: IReportActionContext = {
   getOpportunitiesReport: async () => {},
   getSalesByPeriod: async () => {},
+  getSalesPerformance: async () => {},
 };
 
 export const ReportStateContext = createContext<IReportStateContext>(INITIAL_STATE);
