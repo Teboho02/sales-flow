@@ -2,15 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import {
   Alert,
+  Button,
   Card,
+  DatePicker,
+  Form,
+  Modal,
   Progress,
   Space,
+  Tag,
   Typography,
   Table,
   Skeleton,
+  message,
 } from "antd";
+import { WarningOutlined } from "@ant-design/icons";
 import { getAxiosInstace } from "@/utils/axiosInstance";
 import { useStyles } from "./style/styles";
 
@@ -73,6 +82,16 @@ type SalesPerformance = {
   winRate: number;
 };
 
+type ExpiringContract = {
+  id: string;
+  title: string | null;
+  clientName: string | null;
+  contractValue: number;
+  currency: string | null;
+  endDate: string;
+  daysUntilExpiry: number;
+};
+
 const DashboardView = () => {
   const { styles } = useStyles();
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -80,6 +99,11 @@ const DashboardView = () => {
   const [topPerformers, setTopPerformers] = useState<SalesPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [expiringContracts, setExpiringContracts] = useState<ExpiringContract[]>([]);
+  const [renewTarget, setRenewTarget] = useState<ExpiringContract | null>(null);
+  const [renewLoading, setRenewLoading] = useState(false);
+  const [renewForm] = Form.useForm<{ newEndDate: Dayjs }>();
+  const [messageApi, contextHolder] = message.useMessage();
 
   const instance = useMemo(() => getAxiosInstace(), []);
 
@@ -87,14 +111,21 @@ const DashboardView = () => {
     setLoading(true);
     setError(undefined);
     try {
-      const [overviewRes, pipelineRes, performanceRes] = await Promise.all([
+      const [overviewRes, pipelineRes, performanceRes, expiringRes] = await Promise.all([
         instance.get("/api/Dashboard/overview"),
         instance.get("/api/Opportunities/pipeline"),
         instance.get("/api/Dashboard/sales-performance?topCount=5"),
+        instance.get("/api/Contracts/expiring?daysUntilExpiry=30"),
       ]);
       setOverview(overviewRes.data);
       setPipelineMetrics(pipelineRes.data);
       setTopPerformers(performanceRes.data?.topPerformers ?? []);
+      const expiring = Array.isArray(expiringRes.data?.items)
+        ? expiringRes.data.items
+        : Array.isArray(expiringRes.data)
+          ? expiringRes.data
+          : [];
+      setExpiringContracts(expiring as ExpiringContract[]);
     } catch (err: unknown) {
       const message = axios.isAxiosError(err)
         ? err.response?.data?.detail ?? err.response?.data?.title ?? err.message
@@ -112,6 +143,34 @@ const DashboardView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleRenew = async () => {
+    if (!renewTarget) return;
+    try {
+      const values = await renewForm.validateFields();
+      setRenewLoading(true);
+      await instance.put(`/api/Contracts/${renewTarget.id}/renew`, {
+        newEndDate: values.newEndDate.toISOString(),
+      });
+      messageApi.success(`Contract "${renewTarget.title ?? renewTarget.id}" renewed.`);
+      setRenewTarget(null);
+      renewForm.resetFields();
+      // Refresh expiring list
+      const res = await instance.get("/api/Contracts/expiring?daysUntilExpiry=30");
+      const updated = Array.isArray(res.data?.items)
+        ? res.data.items
+        : Array.isArray(res.data)
+          ? res.data
+          : [];
+      setExpiringContracts(updated as ExpiringContract[]);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        messageApi.error(err.response?.data?.detail ?? err.response?.data?.title ?? "Renewal failed.");
+      }
+    } finally {
+      setRenewLoading(false);
+    }
+  };
+
   const pipelineStageList: StageMetrics[] = useMemo(() => {
     if (!pipelineMetrics) return [];
     return Object.values(pipelineMetrics.stageMetrics || {});
@@ -119,6 +178,7 @@ const DashboardView = () => {
 
   return (
     <div className={styles.page}>
+      {contextHolder}
       <section className={styles.headerRow}>
         <div className={styles.headerText}>
           <Text type="secondary">Welcome back</Text>
@@ -235,8 +295,95 @@ const DashboardView = () => {
               />
             </Card>
           </section>
+
+          {expiringContracts.length > 0 && (
+            <Card
+              className={styles.panelCard}
+              title={
+                <Space>
+                  <WarningOutlined style={{ color: "#fa8c16" }} />
+                  <span>Contracts expiring within 30 days ({expiringContracts.length})</span>
+                </Space>
+              }
+            >
+              <Table
+                size="small"
+                rowKey="id"
+                pagination={false}
+                dataSource={expiringContracts}
+                columns={[
+                  {
+                    title: "Contract",
+                    dataIndex: "title",
+                    key: "title",
+                    render: (v: string | null) => v ?? "Untitled",
+                  },
+                  {
+                    title: "Client",
+                    dataIndex: "clientName",
+                    key: "clientName",
+                    render: (v: string | null) => v ?? "—",
+                  },
+                  {
+                    title: "Expires",
+                    dataIndex: "endDate",
+                    key: "endDate",
+                    render: (v: string) =>
+                      new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(v)),
+                  },
+                  {
+                    title: "Days left",
+                    dataIndex: "daysUntilExpiry",
+                    key: "daysUntilExpiry",
+                    render: (v: number) => (
+                      <Tag color={v <= 7 ? "red" : v <= 14 ? "orange" : "gold"}>{v}d</Tag>
+                    ),
+                  },
+                  {
+                    title: "",
+                    key: "action",
+                    render: (_, record) => (
+                      <Button
+                        size="small"
+                        type="primary"
+                        onClick={() => {
+                          setRenewTarget(record);
+                          renewForm.setFieldValue("newEndDate", dayjs(record.endDate).add(1, "year"));
+                        }}
+                      >
+                        Renew
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
+            </Card>
+          )}
         </>
       )}
+
+      <Modal
+        title={`Renew — ${renewTarget?.title ?? ""}`}
+        open={Boolean(renewTarget)}
+        onOk={() => void handleRenew()}
+        onCancel={() => { setRenewTarget(null); renewForm.resetFields(); }}
+        okText="Confirm Renewal"
+        confirmLoading={renewLoading}
+        width={420}
+      >
+        <Form form={renewForm} layout="vertical">
+          <Form.Item
+            name="newEndDate"
+            label="New end date"
+            rules={[{ required: true, message: "Select a new end date" }]}
+          >
+            <DatePicker
+              style={{ width: "100%" }}
+              disabledDate={(d) => d.isBefore(dayjs(), "day")}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
