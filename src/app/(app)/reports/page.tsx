@@ -3,7 +3,10 @@
 import { useEffect, useMemo } from "react";
 import { Alert, Button, Card, DatePicker, Form, Select, Space, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { FilePdfOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useAuthenticationState } from "@/provider";
 import { ReportProvider, useReportActions, useReportState } from "@/provider";
 import type { OpportunitiesReportItem, SalesByPeriodItem } from "@/provider/report/context";
@@ -69,6 +72,59 @@ const ReportsContent = () => {
     return <Alert type="warning" message="Reports are restricted to Admin and SalesManager roles." showIcon />;
   }
 
+  const handleDownloadPdf = () => {
+    const values = form.getFieldsValue();
+    const startLabel = values.range?.[0]?.format("DD MMM YYYY") ?? "";
+    const endLabel = values.range?.[1]?.format("DD MMM YYYY") ?? "";
+    const generatedAt = dayjs().format("DD MMM YYYY HH:mm");
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("SalesFlow CRM — Reports", 14, 18);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(`Period: ${startLabel} – ${endLabel}`, 14, 26);
+    doc.text(`Generated: ${generatedAt}`, 14, 32);
+    doc.setTextColor(0);
+
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Opportunities Report", 14, 44);
+
+    autoTable(doc, {
+      startY: 48,
+      head: [["Stage", "Owner", "Count", "Total Value"]],
+      body: (opportunitiesReport ?? []).map((r) => [
+        r.stageName ?? r.stage,
+        r.ownerName ?? "All",
+        r.count,
+        formatCurrency(r.totalValue ?? 0),
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [14, 9, 85] },
+    });
+
+    const afterOpp = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
+
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Sales by Period", 14, afterOpp);
+
+    autoTable(doc, {
+      startY: afterOpp + 4,
+      head: [["Period", "Value"]],
+      body: (salesByPeriod ?? []).map((r) => [r.period, formatCurrency(r.value ?? 0)]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [14, 9, 85] },
+    });
+
+    doc.save(`salesflow-reports-${dayjs().format("YYYY-MM-DD")}.pdf`);
+  };
+
   const handleRun = async () => {
     const values = await form.validateFields();
     const startDate = values.range?.[0]?.toISOString();
@@ -93,6 +149,13 @@ const ReportsContent = () => {
             </Title>
             <Text type="secondary">Opportunities and sales performance (Admin/SalesManager).</Text>
           </div>
+          <Button
+            icon={<FilePdfOutlined />}
+            onClick={handleDownloadPdf}
+            disabled={!opportunitiesReport && !salesByPeriod}
+          >
+            Download PDF
+          </Button>
         </div>
 
         <Form

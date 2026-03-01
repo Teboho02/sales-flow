@@ -10,10 +10,13 @@
     "users:bulk-add": "node scripts/bulk-add-users.mjs"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@types/redux-actions": "^2.6.5",
     "antd": "^6.3.1",
     "antd-style": "^4.1.0",
     "axios": "^1.13.5",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
