@@ -206,7 +206,7 @@ const ReportsContent = () => {
         <Card title="Opportunities Report">
           <Table
             size="small"
-            rowKey={(r) => `${r.stage}-${r.ownerId ?? "all"}`}
+            rowKey={(r, index) => `${r.stage}-${r.ownerId ?? "all"}-${index ?? 0}`}
             columns={oppColumns}
             dataSource={opportunitiesReport ?? []}
             loading={isPending}
