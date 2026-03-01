@@ -102,6 +102,10 @@ const ContractsContent = () => {
   const [opportunities, setOpportunities] = useState<
     Array<{ id: string; title: string | null; clientName: string | null }>
   >([]);
+  const [proposals, setProposals] = useState<
+    Array<{ id: string; label: string }>
+  >([]);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
   const [selectedContract, setSelectedContract] = useState<IContract | null>(null);
@@ -190,6 +194,26 @@ const ContractsContent = () => {
       messageApi.error("Failed to load opportunities.");
     } finally {
       setLookupLoading(false);
+    }
+  };
+
+  const fetchProposalsByOpportunity = async (opportunityId?: string) => {
+    if (!opportunityId) { setProposals([]); return; }
+    setProposalsLoading(true);
+    try {
+      const instance = getAxiosInstace();
+      const { data } = await instance.get(`/api/Proposals?opportunityId=${opportunityId}&pageSize=100`);
+      const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+      setProposals(
+        (items as Array<{ id: string; title?: string | null; proposalNumber?: string | null }>).map((p) => ({
+          id: p.id,
+          label: p.title ?? p.proposalNumber ?? p.id,
+        })),
+      );
+    } catch {
+      setProposals([]);
+    } finally {
+      setProposalsLoading(false);
     }
   };
 
@@ -461,6 +485,7 @@ const ContractsContent = () => {
                     terms: record.terms ?? "",
                   });
                   void fetchOpportunitiesByClient(record.clientId);
+                  void fetchProposalsByOpportunity(record.opportunityId ?? undefined);
                 }}
               >
                 Edit
@@ -588,26 +613,47 @@ const ContractsContent = () => {
               optionFilterProp="label"
               placeholder="Select client"
               onChange={(val) => {
-                form.setFieldsValue({ opportunityId: undefined });
+                form.setFieldsValue({ opportunityId: undefined, proposalId: undefined });
+                setProposals([]);
                 void fetchOpportunitiesByClient(val);
               }}
               options={clients.map((c) => ({ label: c.name || c.id, value: c.id }))}
             />
           </Form.Item>
-          <Form.Item name="opportunityId" label="Opportunity">
+          <Form.Item
+            name="opportunityId"
+            label="Opportunity"
+            rules={[{ required: true, message: "Select an opportunity" }]}
+          >
             <Select
               showSearch
               loading={lookupLoading}
               optionFilterProp="label"
               placeholder="Select opportunity"
+              onChange={(val) => {
+                form.setFieldsValue({ proposalId: undefined });
+                void fetchProposalsByOpportunity(val);
+              }}
               options={opportunities.map((o) => ({
                 label: o.title || o.id,
                 value: o.id,
               }))}
             />
           </Form.Item>
-          <Form.Item name="proposalId" label="Proposal ID (optional)">
-            <Input placeholder="Proposal UUID" />
+          <Form.Item
+            name="proposalId"
+            label="Proposal"
+            rules={[{ required: true, message: "Select a proposal — a contract requires an approved proposal" }]}
+          >
+            <Select
+              showSearch
+              loading={proposalsLoading}
+              optionFilterProp="label"
+              placeholder={form.getFieldValue("opportunityId") ? "Select proposal" : "Select an opportunity first"}
+              disabled={!form.getFieldValue("opportunityId")}
+              options={proposals.map((p) => ({ label: p.label, value: p.id }))}
+              notFoundContent={proposalsLoading ? "Loading..." : "No proposals found for this opportunity"}
+            />
           </Form.Item>
           <Form.Item
             name="contractValue"

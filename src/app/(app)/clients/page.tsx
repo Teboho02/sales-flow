@@ -11,9 +11,11 @@ import {
   Input,
   Popconfirm,
   Select,
+  Skeleton,
   Space,
   Switch,
   Table,
+  Tabs,
   Tag,
   Typography,
   message,
@@ -21,6 +23,9 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { ClientProvider, useAuthenticationState, useClientActions, useClientState } from "@/provider";
 import type { IClient } from "@/provider/client/context";
+import type { IOpportunity } from "@/provider/opportunity/context";
+import type { IContract } from "@/provider/contract/context";
+import { getAxiosInstace } from "@/utils/axiosInstance";
 import { useStyles } from "./style/styles";
 
 const { Title, Text } = Typography;
@@ -31,6 +36,21 @@ const clientTypeLabel: Record<number, string> = {
   2: "Private",
   3: "Partner",
 };
+
+const stageLabel: Record<number, string> = {
+  1: "Lead", 2: "Qualified", 3: "Proposal", 4: "Negotiation", 5: "Closed Won", 6: "Closed Lost",
+};
+
+const stageColor: Record<number, string> = {
+  1: "default", 2: "blue", 3: "gold", 4: "orange", 5: "green", 6: "red",
+};
+
+const contractStatusColor: Record<number, string> = {
+  1: "default", 2: "green", 3: "orange", 4: "red",
+};
+
+const formatCurrency = (val: number, currency = "ZAR") =>
+  new Intl.NumberFormat("en-ZA", { style: "currency", currency, maximumFractionDigits: 0 }).format(val ?? 0);
 
 const ClientsContent = () => {
   const { styles } = useStyles();
@@ -57,6 +77,10 @@ const ClientsContent = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [clientTypeFilter, setClientTypeFilter] = useState<number | undefined>(undefined);
   const [isActiveFilter, setIsActiveFilter] = useState<boolean | undefined>(undefined);
+
+  const [clientOpportunities, setClientOpportunities] = useState<IOpportunity[]>([]);
+  const [clientContracts, setClientContracts] = useState<IContract[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const { user } = useAuthenticationState();
   const roles = user?.roles ?? [];
@@ -247,9 +271,27 @@ const ClientsContent = () => {
     });
   }
 
-  const handleRowClick = (client: IClient) => {
+  const handleRowClick = async (client: IClient) => {
     setSelectedClient(client);
+    setClientOpportunities([]);
+    setClientContracts([]);
+    setDetailLoading(true);
     void getClientStats(client.id);
+    try {
+      const instance = getAxiosInstace();
+      const [oppRes, contractRes] = await Promise.all([
+        instance.get(`/api/Opportunities?clientId=${client.id}&pageSize=100`),
+        instance.get(`/api/Contracts?clientId=${client.id}&pageSize=100`),
+      ]);
+      const opps = Array.isArray(oppRes.data) ? oppRes.data : (oppRes.data?.items ?? []);
+      const contracts = Array.isArray(contractRes.data) ? contractRes.data : (contractRes.data?.items ?? []);
+      setClientOpportunities(opps as IOpportunity[]);
+      setClientContracts(contracts as IContract[]);
+    } catch {
+      // non-critical — stats drawer still shows
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   return (
@@ -361,49 +403,155 @@ const ClientsContent = () => {
               })
             }
             onRow={(record) => ({
-              onClick: () => handleRowClick(record),
+              onClick: () => void handleRowClick(record),
             })}
           />
         </Space>
 
         <Drawer
-          title={selectedClient?.name ?? "Client stats"}
+          title={selectedClient?.name ?? "Client details"}
           open={Boolean(selectedClient)}
           onClose={() => setSelectedClient(null)}
-          width={isMobile ? "100%" : 360}
+          width={isMobile ? "100%" : 720}
         >
           {selectedClient ? (
-            <Space direction="vertical" size={8} style={{ width: "100%" }}>
-              <Text type="secondary">Totals</Text>
-              <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                <Text>Contacts</Text>
-                <Text strong>{clientStats?.totalContacts ?? "-"}</Text>
-              </Space>
-              <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                <Text>Opportunities</Text>
-                <Text strong>{clientStats?.totalOpportunities ?? "-"}</Text>
-              </Space>
-              <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                <Text>Contracts</Text>
-                <Text strong>{clientStats?.totalContracts ?? "-"}</Text>
-              </Space>
-              <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                <Text>Total contract value</Text>
-                <Text strong>
-                  {clientStats?.totalContractValue != null
-                    ? new Intl.NumberFormat("en-ZA", {
-                        style: "currency",
-                        currency: "ZAR",
-                        maximumFractionDigits: 0,
-                      }).format(clientStats.totalContractValue)
-                    : "-"}
-                </Text>
-              </Space>
-              <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                <Text>Active opportunities</Text>
-                <Text strong>{clientStats?.activeOpportunities ?? "-"}</Text>
-              </Space>
-            </Space>
+            <Tabs
+              defaultActiveKey="summary"
+              items={[
+                {
+                  key: "summary",
+                  label: "Summary",
+                  children: (
+                    <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                      <Text type="secondary">Totals</Text>
+                      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+                        <Text>Contacts</Text>
+                        <Text strong>{clientStats?.totalContacts ?? "-"}</Text>
+                      </Space>
+                      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+                        <Text>Opportunities</Text>
+                        <Text strong>{clientStats?.totalOpportunities ?? "-"}</Text>
+                      </Space>
+                      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+                        <Text>Active opportunities</Text>
+                        <Text strong>{clientStats?.activeOpportunities ?? "-"}</Text>
+                      </Space>
+                      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+                        <Text>Contracts</Text>
+                        <Text strong>{clientStats?.totalContracts ?? "-"}</Text>
+                      </Space>
+                      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+                        <Text>Total contract value</Text>
+                        <Text strong>
+                          {clientStats?.totalContractValue != null
+                            ? formatCurrency(clientStats.totalContractValue)
+                            : "-"}
+                        </Text>
+                      </Space>
+                    </Space>
+                  ),
+                },
+                {
+                  key: "opportunities",
+                  label: `Opportunities (${clientOpportunities.length})`,
+                  children: detailLoading ? (
+                    <Skeleton active />
+                  ) : (
+                    <Table<IOpportunity>
+                      size="small"
+                      rowKey="id"
+                      pagination={false}
+                      dataSource={clientOpportunities}
+                      locale={{ emptyText: "No opportunities" }}
+                      columns={[
+                        {
+                          title: "Title",
+                          dataIndex: "title",
+                          key: "title",
+                          render: (v: string | null) => v ?? "-",
+                        },
+                        {
+                          title: "Stage",
+                          dataIndex: "stage",
+                          key: "stage",
+                          render: (v: number, r) => (
+                            <Tag color={stageColor[v] ?? "default"}>
+                              {r.stageName ?? stageLabel[v] ?? v}
+                            </Tag>
+                          ),
+                        },
+                        {
+                          title: "Value",
+                          dataIndex: "estimatedValue",
+                          key: "estimatedValue",
+                          align: "right" as const,
+                          render: (v: number, r) => formatCurrency(v, r.currency ?? "ZAR"),
+                        },
+                        {
+                          title: "Owner",
+                          dataIndex: "ownerName",
+                          key: "ownerName",
+                          render: (v: string | null) => v ?? "-",
+                        },
+                      ] as ColumnsType<IOpportunity>}
+                    />
+                  ),
+                },
+                {
+                  key: "contracts",
+                  label: `Contracts (${clientContracts.length})`,
+                  children: detailLoading ? (
+                    <Skeleton active />
+                  ) : (
+                    <Table<IContract>
+                      size="small"
+                      rowKey="id"
+                      pagination={false}
+                      dataSource={clientContracts}
+                      locale={{ emptyText: "No contracts" }}
+                      columns={[
+                        {
+                          title: "Title",
+                          dataIndex: "title",
+                          key: "title",
+                          render: (v: string | null) => v ?? "-",
+                        },
+                        {
+                          title: "Status",
+                          dataIndex: "statusName",
+                          key: "statusName",
+                          render: (v: string | null, r) => (
+                            <Tag color={contractStatusColor[r.status] ?? "default"}>
+                              {v ?? r.status}
+                            </Tag>
+                          ),
+                        },
+                        {
+                          title: "Value",
+                          dataIndex: "contractValue",
+                          key: "contractValue",
+                          align: "right" as const,
+                          render: (v: number, r) => formatCurrency(v, r.currency ?? "ZAR"),
+                        },
+                        {
+                          title: "Ends",
+                          dataIndex: "endDate",
+                          key: "endDate",
+                          render: (v: string) =>
+                            v
+                              ? new Intl.DateTimeFormat("en-ZA", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                }).format(new Date(v))
+                              : "-",
+                        },
+                      ] as ColumnsType<IContract>}
+                    />
+                  ),
+                },
+              ]}
+            />
           ) : null}
         </Drawer>
 
