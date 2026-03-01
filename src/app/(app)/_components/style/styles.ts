@@ -188,4 +188,313 @@ export const useStyles = createStyles(({ token }) => ({
       border-radius: ${token.borderRadius}px;
     }
   `,
+
+  sidebarFooter: css`
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  `,
+
+  sidebarAskAiButton: css`
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2) !important;
+      border-color: rgba(255, 255, 255, 0.35) !important;
+      color: #ffffff !important;
+    }
+  `,
+
+  assistantModal: css`
+    .ant-modal-content {
+      border-radius: ${token.borderRadiusLG + 6}px;
+      border: 1px solid rgba(22, 119, 255, 0.2);
+      background:
+        radial-gradient(140% 90% at -5% -10%, rgba(82, 196, 255, 0.22) 0%, transparent 45%),
+        radial-gradient(100% 80% at 120% 0%, rgba(22, 119, 255, 0.16) 0%, transparent 60%),
+        ${token.colorBgContainer};
+      box-shadow:
+        0 20px 48px rgba(15, 41, 83, 0.22),
+        0 0 0 1px rgba(82, 196, 255, 0.2) inset;
+      overflow: hidden;
+    }
+
+    .ant-modal-header {
+      background: transparent;
+      border-bottom: 1px solid rgba(22, 119, 255, 0.16);
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+    }
+
+    .ant-modal-title {
+      color: ${token.colorTextHeading};
+      font-weight: ${token.fontWeightStrong};
+      letter-spacing: 0.2px;
+    }
+
+    .ant-modal-close {
+      color: ${token.colorTextSecondary};
+    }
+  `,
+
+  assistantHint: css`
+    color: ${token.colorTextSecondary};
+    font-size: 13px;
+  `,
+
+  assistantPromptInput: css`
+    .ant-input {
+      border-radius: ${token.borderRadiusLG}px;
+      border: 1px solid rgba(22, 119, 255, 0.24);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.03) inset;
+    }
+
+    .ant-input:focus,
+    .ant-input-focused {
+      border-color: ${token.colorPrimary};
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.12);
+    }
+  `,
+
+  assistantPromptMeta: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${token.marginXS}px;
+    flex-wrap: wrap;
+  `,
+
+  assistantPromptCount: css`
+    color: ${token.colorTextSecondary};
+    font-size: 12px;
+  `,
+
+  assistantIntentBadge: css`
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(22, 119, 255, 0.24);
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: ${token.fontWeightStrong};
+    color: ${token.colorPrimary};
+    background: rgba(22, 119, 255, 0.08);
+    letter-spacing: 0.3px;
+  `,
+
+  assistantIntentBadgeClient: css`
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(82, 196, 26, 0.34);
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: ${token.fontWeightStrong};
+    color: #237804;
+    background: rgba(82, 196, 26, 0.1);
+    letter-spacing: 0.3px;
+  `,
+
+  assistantActions: css`
+    width: 100%;
+  `,
+
+  assistantPrimaryButton: css`
+    border: none;
+    font-weight: ${token.fontWeightStrong};
+    background: linear-gradient(120deg, ${token.colorPrimary} 0%, #2da4ff 100%);
+    box-shadow: 0 10px 24px rgba(22, 119, 255, 0.3);
+  `,
+
+  speechButton: css`
+    border: 1px solid rgba(22, 119, 255, 0.35);
+    color: ${token.colorPrimary};
+    background: ${token.colorBgContainer};
+    border-radius: 999px;
+    font-weight: ${token.fontWeightStrong};
+
+    &:hover {
+      border-color: ${token.colorPrimary};
+      color: ${token.colorPrimary};
+      background: ${token.colorPrimaryBg};
+    }
+  `,
+
+  speechButtonActive: css`
+    border: 1px solid #13c2c2;
+    color: #006d75;
+    background: linear-gradient(120deg, rgba(54, 207, 201, 0.16) 0%, rgba(36, 186, 173, 0.06) 100%);
+    border-radius: 999px;
+    font-weight: ${token.fontWeightStrong};
+    box-shadow:
+      0 0 0 1px rgba(19, 194, 194, 0.24) inset,
+      0 8px 18px rgba(19, 194, 194, 0.16);
+  `,
+
+  speechHint: css`
+    color: ${token.colorTextSecondary};
+    font-size: 12px;
+  `,
+
+  voiceLivePanel: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${token.marginSM}px;
+    border: 1px solid rgba(22, 119, 255, 0.15);
+    border-radius: ${token.borderRadius}px;
+    padding: 8px 10px;
+    background: rgba(22, 119, 255, 0.04);
+  `,
+
+  voiceWave: css`
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 58px;
+    height: 18px;
+  `,
+
+  voiceWaveBar: css`
+    width: 3px;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #52c4ff 0%, #1677ff 100%);
+    animation: aiVoiceWave 0.9s ease-in-out infinite;
+    transform-origin: center bottom;
+
+    @keyframes aiVoiceWave {
+      0%,
+      100% {
+        transform: scaleY(0.35);
+        opacity: 0.5;
+      }
+      50% {
+        transform: scaleY(1.55);
+        opacity: 1;
+      }
+    }
+  `,
+
+  assistantThinking: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${token.marginSM}px;
+    border-radius: ${token.borderRadius}px;
+    border: 1px solid rgba(22, 119, 255, 0.2);
+    padding: 10px 12px;
+    background: rgba(22, 119, 255, 0.05);
+  `,
+
+  assistantThinkingText: css`
+    color: ${token.colorTextSecondary};
+    font-size: 13px;
+  `,
+
+  assistantThinkingDots: css`
+    display: inline-flex;
+    gap: 4px;
+  `,
+
+  assistantThinkingDot: css`
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: ${token.colorPrimary};
+    animation: aiThinkingPulse 0.8s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.12s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.24s;
+    }
+
+    @keyframes aiThinkingPulse {
+      0%,
+      100% {
+        transform: scale(0.8);
+        opacity: 0.45;
+      }
+      50% {
+        transform: scale(1.12);
+        opacity: 1;
+      }
+    }
+  `,
+
+  assistantAnswer: css`
+    border-radius: 12px;
+    border: 1px solid rgba(22, 119, 255, 0.2);
+    background:
+      linear-gradient(150deg, rgba(22, 119, 255, 0.06) 0%, rgba(82, 196, 255, 0.03) 100%),
+      ${token.colorBgContainer};
+    padding: 12px 14px;
+    animation: aiAnswerIn 0.3s ease-out;
+
+    @keyframes aiAnswerIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `,
+
+  assistantAnswerHeader: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: ${token.marginXS}px;
+    margin-bottom: 6px;
+  `,
+
+  assistantAnswerLabel: css`
+    color: ${token.colorTextHeading};
+    font-weight: ${token.fontWeightStrong};
+    font-size: 12px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  `,
+
+  assistantAnswerTime: css`
+    color: ${token.colorTextQuaternary};
+    font-size: 11px;
+  `,
+
+  assistantAnswerText: css`
+    white-space: pre-wrap;
+    line-height: 1.6;
+    color: ${token.colorText};
+  `,
+
+  assistantClientPreview: css`
+    border-radius: 10px;
+    border: 1px solid ${token.colorBorderSecondary};
+    background: ${token.colorBgContainer};
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  `,
+
+  assistantClientPreviewTitle: css`
+    font-weight: ${token.fontWeightStrong};
+    color: ${token.colorTextHeading};
+  `,
+
+  assistantClientPreviewText: css`
+    color: ${token.colorTextSecondary};
+    line-height: 1.5;
+  `,
 }));
