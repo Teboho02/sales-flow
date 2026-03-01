@@ -1,18 +1,27 @@
 import { createContext } from "react";
 
 export interface OpportunitiesReportItem {
+  id: string;
+  title: string;
+  clientName: string;
+  ownerName: string;
+  estimatedValue: number;
+  currency: string;
   stage: number;
   stageName: string | null;
-  ownerId?: string | null;
-  ownerName?: string | null;
-  count: number;
-  totalValue: number;
-  weightedValue?: number;
+  probability: number;
+  expectedCloseDate: string | null;
+  actualCloseDate: string | null;
 }
 
 export interface SalesByPeriodItem {
-  period: string; // e.g. "2026-02" or "2026-W09"
-  value: number;
+  periodName: string;
+  opportunitiesCount: number;
+  wonCount: number;
+  lostCount: number;
+  totalValue: number;
+  wonValue: number;
+  winRate: number;
 }
 
 export interface OpportunitiesReportQuery {

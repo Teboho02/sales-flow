@@ -42,6 +42,9 @@ const ReportsContent = () => {
   }, [canView]);
 
   const oppColumns: ColumnsType<OpportunitiesReportItem> = [
+    { title: "Opportunity", dataIndex: "title", key: "title" },
+    { title: "Client", dataIndex: "clientName", key: "clientName" },
+    { title: "Owner", dataIndex: "ownerName", key: "ownerName" },
     {
       title: "Stage",
       dataIndex: "stageName",
@@ -49,23 +52,27 @@ const ReportsContent = () => {
       render: (text, record) => text ?? record.stage,
     },
     {
-      title: "Owner",
-      dataIndex: "ownerName",
-      key: "ownerName",
-      render: (text) => text ?? "All",
-    },
-    { title: "Count", dataIndex: "count", key: "count" },
-    {
-      title: "Total Value",
-      dataIndex: "totalValue",
-      key: "totalValue",
+      title: "Estimated Value",
+      dataIndex: "estimatedValue",
+      key: "estimatedValue",
       render: (val: number) => formatCurrency(val ?? 0),
+    },
+    {
+      title: "Probability",
+      dataIndex: "probability",
+      key: "probability",
+      render: (val: number) => `${val ?? 0}%`,
     },
   ];
 
   const salesColumns: ColumnsType<SalesByPeriodItem> = [
-    { title: "Period", dataIndex: "period", key: "period" },
-    { title: "Value", dataIndex: "value", key: "value", render: (val) => formatCurrency(val ?? 0) },
+    { title: "Period", dataIndex: "periodName", key: "periodName" },
+    { title: "Opportunities", dataIndex: "opportunitiesCount", key: "opportunitiesCount" },
+    { title: "Won", dataIndex: "wonCount", key: "wonCount" },
+    { title: "Lost", dataIndex: "lostCount", key: "lostCount" },
+    { title: "Win Rate", dataIndex: "winRate", key: "winRate", render: (val: number) => `${Math.round(val ?? 0)}%` },
+    { title: "Total Value", dataIndex: "totalValue", key: "totalValue", render: (val: number) => formatCurrency(val ?? 0) },
+    { title: "Won Value", dataIndex: "wonValue", key: "wonValue", render: (val: number) => formatCurrency(val ?? 0) },
   ];
 
   if (!canView) {
@@ -97,12 +104,14 @@ const ReportsContent = () => {
 
     autoTable(doc, {
       startY: 48,
-      head: [["Stage", "Owner", "Count", "Total Value"]],
+      head: [["Opportunity", "Client", "Owner", "Stage", "Estimated Value", "Probability"]],
       body: (opportunitiesReport ?? []).map((r) => [
+        r.title,
+        r.clientName,
+        r.ownerName,
         r.stageName ?? r.stage,
-        r.ownerName ?? "All",
-        r.count,
-        formatCurrency(r.totalValue ?? 0),
+        formatCurrency(r.estimatedValue ?? 0),
+        `${r.probability ?? 0}%`,
       ]),
       styles: { fontSize: 9 },
       headStyles: { fillColor: [14, 9, 85] },
@@ -116,8 +125,16 @@ const ReportsContent = () => {
 
     autoTable(doc, {
       startY: afterOpp + 4,
-      head: [["Period", "Value"]],
-      body: (salesByPeriod ?? []).map((r) => [r.period, formatCurrency(r.value ?? 0)]),
+      head: [["Period", "Opportunities", "Won", "Lost", "Win Rate", "Total Value", "Won Value"]],
+      body: (salesByPeriod ?? []).map((r) => [
+        r.periodName,
+        r.opportunitiesCount,
+        r.wonCount,
+        r.lostCount,
+        `${Math.round(r.winRate ?? 0)}%`,
+        formatCurrency(r.totalValue ?? 0),
+        formatCurrency(r.wonValue ?? 0),
+      ]),
       styles: { fontSize: 9 },
       headStyles: { fillColor: [14, 9, 85] },
     });
@@ -206,7 +223,7 @@ const ReportsContent = () => {
         <Card title="Opportunities Report">
           <Table
             size="small"
-            rowKey={(r, index) => `${r.stage}-${r.ownerId ?? "all"}-${index ?? 0}`}
+            rowKey={(r) => r.id}
             columns={oppColumns}
             dataSource={opportunitiesReport ?? []}
             loading={isPending}
@@ -217,7 +234,7 @@ const ReportsContent = () => {
         <Card title="Sales by Period">
           <Table
             size="small"
-            rowKey={(r) => r.period}
+            rowKey={(r) => r.periodName}
             columns={salesColumns}
             dataSource={salesByPeriod ?? []}
             loading={isPending}
