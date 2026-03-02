@@ -108,7 +108,7 @@ const RegisterView = () => {
             invitedRole={invitedRole}
           />
 
-          <Text className={styles.subtitle} style={{ marginTop: 12, display: "block" }}>
+          <Text className={styles.subtitle} style={{ marginTop: 8, display: "block" }}>
             Already have an account? <Link href="/login">Sign in</Link>
           </Text>
         </div>
