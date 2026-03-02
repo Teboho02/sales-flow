@@ -89,7 +89,7 @@ const RegisterForm = ({
             name="firstName"
             rules={[{ required: true, message: "Please enter your first name." }]}
           >
-            <Input size="large" autoComplete="given-name" />
+            <Input size="middle" autoComplete="given-name" />
           </Form.Item>
         </Col>
         <Col span={12}>
@@ -98,7 +98,7 @@ const RegisterForm = ({
             name="lastName"
             rules={[{ required: true, message: "Please enter your last name." }]}
           >
-            <Input size="large" autoComplete="family-name" />
+            <Input size="middle" autoComplete="family-name" />
           </Form.Item>
         </Col>
       </Row>
@@ -112,7 +112,7 @@ const RegisterForm = ({
         ]}
       >
         <Input
-          size="large"
+          size="middle"
           autoComplete="email"
           placeholder="you@company.com"
           disabled={isInvited}
@@ -124,7 +124,7 @@ const RegisterForm = ({
         name="phoneNumber"
         rules={[{ required: true, message: "Please enter your phone number." }]}
       >
-        <Input size="large" autoComplete="tel" placeholder="+27 82 000 0000" />
+        <Input size="middle" autoComplete="tel" placeholder="+27 82 000 0000" />
       </Form.Item>
 
       {!isInvited && accountType === "newTenant" ? (
@@ -133,7 +133,7 @@ const RegisterForm = ({
           name="tenantName"
           rules={[{ required: true, message: "Enter your organisation name." }]}
         >
-          <Input size="large" placeholder="Acme Consulting" />
+          <Input size="middle" placeholder="Acme Consulting" />
         </Form.Item>
       ) : null}
 
@@ -157,7 +157,7 @@ const RegisterForm = ({
             },
           ]}
         >
-          <Input size="large" placeholder="63d7bdc1-d2c4-488c-98c7-15c8d0657d58" />
+          <Input size="middle" placeholder="63d7bdc1-d2c4-488c-98c7-15c8d0657d58" />
         </Form.Item>
       ) : null}
 
@@ -168,7 +168,7 @@ const RegisterForm = ({
           rules={[{ required: true, message: "Select your role." }]}
         >
           <Select
-            size="large"
+            size="middle"
             disabled={isInvited}
             options={[
               { value: "SalesRep", label: "Sales Rep" },
@@ -187,7 +187,7 @@ const RegisterForm = ({
           { min: 8, message: "Password must be at least 8 characters." },
         ]}
       >
-        <Input.Password size="large" autoComplete="new-password" />
+        <Input.Password size="middle" autoComplete="new-password" />
       </Form.Item>
 
       <Form.Item<RegisterFormValues>
@@ -206,13 +206,13 @@ const RegisterForm = ({
           }),
         ]}
       >
-        <Input.Password size="large" autoComplete="new-password" />
+        <Input.Password size="middle" autoComplete="new-password" />
       </Form.Item>
 
       <Button
         type="primary"
         htmlType="submit"
-        size="large"
+        size="middle"
         block
         loading={isLoading}
         className={styles.submitButton}

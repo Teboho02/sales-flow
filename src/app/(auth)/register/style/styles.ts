@@ -60,18 +60,18 @@ export const useStyles = createStyles(({ token }) => ({
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 24px;
+    padding: 20px 24px;
   `,
   content: css`
     width: min(420px, 100%);
     background: rgba(255, 255, 255, 0.96);
     border-radius: 18px;
-    padding: 24px;
+    padding: 20px;
     box-shadow: 0 20px 48px rgba(2, 10, 26, 0.2);
   `,
   header: css`
     text-align: left;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
   `,
   appName: css`
     display: block;
@@ -80,7 +80,7 @@ export const useStyles = createStyles(({ token }) => ({
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: ${token.colorPrimary};
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   `,
   title: css`
     margin-bottom: 4px !important;
@@ -109,7 +109,11 @@ export const useStyles = createStyles(({ token }) => ({
   form: css`
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
+
+    .ant-form-item {
+      margin-bottom: 8px;
+    }
   `,
 
   segmented: css`
@@ -127,7 +131,7 @@ export const useStyles = createStyles(({ token }) => ({
   `,
 
   submitButton: css`
-    height: 44px;
+    height: 36px;
     font-weight: 600;
     background: ${token.colorPrimary};
   `,
